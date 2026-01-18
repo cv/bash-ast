@@ -181,7 +181,10 @@ unsafe fn convert_connection(
         flatten_pipeline(&second, &mut commands);
 
         Some(Command::Pipeline {
-            line: line_or_none(line),
+            // Don't include line for pipelines - the COMMAND.line field
+            // for CONNECTION types is unreliable (uninitialized on some
+            // platforms). Child commands have their own accurate line numbers.
+            line: None,
             commands,
             negated,
         })
@@ -224,7 +227,10 @@ unsafe fn convert_connection(
 
         match right {
             Some(right_cmd) => Some(Command::List {
-                line: line_or_none(line),
+                // Don't include line for list commands - it's unreliable
+                // (uninitialized on some platforms) and the child commands
+                // have their own accurate line numbers
+                line: None,
                 op,
                 left: Box::new(left),
                 right: Box::new(right_cmd),
@@ -235,11 +241,11 @@ unsafe fn convert_connection(
                 // mark the left command as backgrounded by returning it as
                 // a single-element list
                 Some(Command::List {
-                    line: line_or_none(line),
+                    line: None,
                     op: ListOp::Amp,
                     left: Box::new(left),
                     right: Box::new(Command::Simple {
-                        line: line_or_none(line),
+                        line: None,
                         words: vec![],
                         redirects: vec![],
                         assignments: None,
