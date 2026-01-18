@@ -57,13 +57,17 @@ const COND_EXPR: i32 = 6;
 /// `CMD_INVERT_RETURN` flag
 const CMD_INVERT_RETURN: i32 = 0x04;
 
-/// Convert a line number to Option, treating 0 as "unknown"
+/// Convert a line number to Option, filtering out invalid values
 ///
 /// Bash doesn't always track line numbers accurately for all command types.
-/// When the line number is 0, we return None to indicate it's unknown rather
-/// than incorrectly claiming the command is on line 0.
+/// When the line number is 0 or appears to be garbage (uninitialized memory),
+/// we return None to indicate it's unknown.
+///
+/// We consider line numbers > 1 million to be garbage since no reasonable
+/// script would have that many lines.
 const fn line_or_none(line: u32) -> Option<u32> {
-    if line == 0 {
+    // Filter out 0 (unknown) and garbage values (uninitialized memory on Linux)
+    if line == 0 || line > 1_000_000 {
         None
     } else {
         Some(line)
