@@ -159,7 +159,7 @@ unsafe fn convert_simple(cmd: &ffi::COMMAND, line: u32) -> Option<Command> {
 
 unsafe fn convert_connection(
     cmd: &ffi::COMMAND,
-    line: u32,
+    _line: u32,
     negated: bool,
     depth: usize,
 ) -> Option<Command> {
