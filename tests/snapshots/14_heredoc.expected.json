@@ -1,0 +1,17 @@
+{
+  "type": "simple",
+  "line": 1,
+  "words": [
+    {
+      "word": "cat"
+    }
+  ],
+  "redirects": [
+    {
+      "direction": "here_doc",
+      "source_fd": 0,
+      "target": "This is a heredoc\nwith multiple lines\n",
+      "here_doc_eof": "EOF"
+    }
+  ]
+}

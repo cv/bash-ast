@@ -1,0 +1,91 @@
+{
+  "type": "if",
+  "condition": {
+    "type": "simple",
+    "line": 1,
+    "words": [
+      {
+        "word": "["
+      },
+      {
+        "word": "\"$x\"",
+        "flags": 3
+      },
+      {
+        "word": "-eq"
+      },
+      {
+        "word": "1"
+      },
+      {
+        "word": "]"
+      }
+    ],
+    "redirects": []
+  },
+  "then_branch": {
+    "type": "simple",
+    "line": 2,
+    "words": [
+      {
+        "word": "echo"
+      },
+      {
+        "word": "one"
+      }
+    ],
+    "redirects": []
+  },
+  "else_branch": {
+    "type": "if",
+    "condition": {
+      "type": "simple",
+      "line": 3,
+      "words": [
+        {
+          "word": "["
+        },
+        {
+          "word": "\"$x\"",
+          "flags": 3
+        },
+        {
+          "word": "-eq"
+        },
+        {
+          "word": "2"
+        },
+        {
+          "word": "]"
+        }
+      ],
+      "redirects": []
+    },
+    "then_branch": {
+      "type": "simple",
+      "line": 4,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "two"
+        }
+      ],
+      "redirects": []
+    },
+    "else_branch": {
+      "type": "simple",
+      "line": 6,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "other"
+        }
+      ],
+      "redirects": []
+    }
+  }
+}

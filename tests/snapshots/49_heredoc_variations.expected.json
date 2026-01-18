@@ -1,0 +1,125 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "simple",
+          "line": 1,
+          "words": [
+            {
+              "word": "cat"
+            }
+          ],
+          "redirects": [
+            {
+              "direction": "here_doc",
+              "source_fd": 0,
+              "target": "Variables expand: $HOME\nCommands run: $(date)\n",
+              "here_doc_eof": "EOF"
+            }
+          ]
+        },
+        "right": {
+          "type": "simple",
+          "line": 6,
+          "words": [
+            {
+              "word": "cat"
+            }
+          ],
+          "redirects": [
+            {
+              "direction": "here_doc",
+              "source_fd": 0,
+              "target": "Variables don't expand: $HOME\nCommands don't run: $(date)\n",
+              "here_doc_eof": "LITERAL"
+            }
+          ]
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 11,
+        "words": [
+          {
+            "word": "cat"
+          }
+        ],
+        "redirects": [
+          {
+            "direction": "here_doc",
+            "source_fd": 0,
+            "target": "Tabs are stripped\nFrom the beginning\n",
+            "here_doc_eof": "INDENTED"
+          }
+        ]
+      }
+    },
+    "right": {
+      "type": "list",
+      "op": "or",
+      "left": {
+        "type": "simple",
+        "line": 16,
+        "words": [
+          {
+            "word": "read"
+          },
+          {
+            "word": "-r"
+          },
+          {
+            "word": "-d"
+          },
+          {
+            "word": "''",
+            "flags": 2
+          },
+          {
+            "word": "JSON"
+          }
+        ],
+        "redirects": [
+          {
+            "direction": "here_doc",
+            "source_fd": 0,
+            "target": "{\n    \"name\": \"test\",\n    \"value\": 42\n}\n",
+            "here_doc_eof": "END"
+          }
+        ]
+      },
+      "right": {
+        "type": "simple",
+        "line": 16,
+        "words": [
+          {
+            "word": "true"
+          }
+        ],
+        "redirects": []
+      }
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 23,
+    "words": [
+      {
+        "word": "echo"
+      },
+      {
+        "word": "\"$JSON\"",
+        "flags": 3
+      }
+    ],
+    "redirects": []
+  }
+}

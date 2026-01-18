@@ -1,0 +1,76 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "simple",
+        "line": 1,
+        "words": [
+          {
+            "word": "cmd"
+          }
+        ],
+        "redirects": [
+          {
+            "direction": "move_input",
+            "source_fd": 0,
+            "target": 3
+          }
+        ]
+      },
+      "right": {
+        "type": "simple",
+        "line": 2,
+        "words": [
+          {
+            "word": "cmd"
+          }
+        ],
+        "redirects": [
+          {
+            "direction": "move_output",
+            "source_fd": 1,
+            "target": 4
+          }
+        ]
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 3,
+      "words": [
+        {
+          "word": "exec"
+        }
+      ],
+      "redirects": [
+        {
+          "direction": "move_input",
+          "source_fd": 3,
+          "target": 5
+        }
+      ]
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 4,
+    "words": [
+      {
+        "word": "exec"
+      }
+    ],
+    "redirects": [
+      {
+        "direction": "move_output",
+        "source_fd": 4,
+        "target": 6
+      }
+    ]
+  }
+}

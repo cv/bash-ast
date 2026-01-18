@@ -1,0 +1,6 @@
+target
+artifacts
+coverage
+
+# Keep seed corpus tracked, but ignore fuzzer-generated additions
+# To add new seeds: place files in corpus/fuzz_parse/ and commit

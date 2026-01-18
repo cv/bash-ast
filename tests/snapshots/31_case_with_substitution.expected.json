@@ -1,0 +1,91 @@
+{
+  "type": "case",
+  "line": 1,
+  "word": "\"$(uname -s)\"",
+  "clauses": [
+    {
+      "patterns": [
+        "Linux*"
+      ],
+      "action": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "simple",
+          "line": 3,
+          "words": [],
+          "redirects": [],
+          "assignments": [
+            "OS=linux"
+          ]
+        },
+        "right": {
+          "type": "simple",
+          "line": 4,
+          "words": [],
+          "redirects": [],
+          "assignments": [
+            "PKG_MGR=$(command -v apt || command -v yum)"
+          ]
+        }
+      }
+    },
+    {
+      "patterns": [
+        "Darwin*"
+      ],
+      "action": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "simple",
+          "line": 7,
+          "words": [],
+          "redirects": [],
+          "assignments": [
+            "OS=macos"
+          ]
+        },
+        "right": {
+          "type": "simple",
+          "line": 8,
+          "words": [],
+          "redirects": [],
+          "assignments": [
+            "PKG_MGR=$(command -v brew)"
+          ]
+        }
+      }
+    },
+    {
+      "patterns": [
+        "CYGWIN*",
+        "MINGW*",
+        "MSYS*"
+      ],
+      "action": {
+        "type": "simple",
+        "line": 11,
+        "words": [],
+        "redirects": [],
+        "assignments": [
+          "OS=windows"
+        ]
+      }
+    },
+    {
+      "patterns": [
+        "*"
+      ],
+      "action": {
+        "type": "simple",
+        "line": 14,
+        "words": [],
+        "redirects": [],
+        "assignments": [
+          "OS=\"$(uname -s | tr '[:upper:]' '[:lower:]')\""
+        ]
+      }
+    }
+  ]
+}

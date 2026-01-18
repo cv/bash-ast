@@ -1,0 +1,58 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "simple",
+        "line": 1,
+        "words": [],
+        "redirects": [],
+        "assignments": [
+          "arr=(one two three)"
+        ]
+      },
+      "right": {
+        "type": "simple",
+        "line": 2,
+        "words": [],
+        "redirects": [],
+        "assignments": [
+          "arr[0]=first"
+        ]
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 3,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "${arr[@]}",
+          "flags": 1
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 4,
+    "words": [
+      {
+        "word": "echo"
+      },
+      {
+        "word": "${#arr[@]}",
+        "flags": 1
+      }
+    ],
+    "redirects": []
+  }
+}

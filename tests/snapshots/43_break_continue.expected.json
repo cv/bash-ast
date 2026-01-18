@@ -1,0 +1,198 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "for",
+    "line": 1,
+    "variable": "i",
+    "words": [
+      "{1..10}"
+    ],
+    "body": {
+      "type": "for",
+      "line": 2,
+      "variable": "j",
+      "words": [
+        "{1..10}"
+      ],
+      "body": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "if",
+            "condition": {
+              "type": "arithmetic",
+              "line": 3,
+              "expression": " i * j > 50 "
+            },
+            "then_branch": {
+              "type": "simple",
+              "line": 4,
+              "words": [
+                {
+                  "word": "break"
+                },
+                {
+                  "word": "2"
+                }
+              ],
+              "redirects": []
+            }
+          },
+          "right": {
+            "type": "if",
+            "condition": {
+              "type": "arithmetic",
+              "line": 6,
+              "expression": " (i + j) % 2 == 0 "
+            },
+            "then_branch": {
+              "type": "simple",
+              "line": 7,
+              "words": [
+                {
+                  "word": "continue"
+                }
+              ],
+              "redirects": []
+            }
+          }
+        },
+        "right": {
+          "type": "simple",
+          "line": 9,
+          "words": [
+            {
+              "word": "echo"
+            },
+            {
+              "word": "\"$i x $j\"",
+              "flags": 3
+            }
+          ],
+          "redirects": []
+        }
+      }
+    }
+  },
+  "right": {
+    "type": "while",
+    "test": {
+      "type": "simple",
+      "line": 13,
+      "words": [
+        {
+          "word": ":"
+        }
+      ],
+      "redirects": []
+    },
+    "body": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "or",
+            "left": {
+              "type": "simple",
+              "line": 14,
+              "words": [
+                {
+                  "word": "read"
+                },
+                {
+                  "word": "-r"
+                },
+                {
+                  "word": "cmd"
+                }
+              ],
+              "redirects": []
+            },
+            "right": {
+              "type": "simple",
+              "line": 14,
+              "words": [
+                {
+                  "word": "break"
+                }
+              ],
+              "redirects": []
+            }
+          },
+          "right": {
+            "type": "list",
+            "op": "and",
+            "left": {
+              "type": "conditional",
+              "line": 15,
+              "expr": {
+                "cond_type": "binary",
+                "op": "==",
+                "left": "$cmd",
+                "right": "\"skip\""
+              }
+            },
+            "right": {
+              "type": "simple",
+              "line": 15,
+              "words": [
+                {
+                  "word": "continue"
+                }
+              ],
+              "redirects": []
+            }
+          }
+        },
+        "right": {
+          "type": "list",
+          "op": "and",
+          "left": {
+            "type": "conditional",
+            "line": 16,
+            "expr": {
+              "cond_type": "binary",
+              "op": "==",
+              "left": "$cmd",
+              "right": "\"quit\""
+            }
+          },
+          "right": {
+            "type": "simple",
+            "line": 16,
+            "words": [
+              {
+                "word": "break"
+              }
+            ],
+            "redirects": []
+          }
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 17,
+        "words": [
+          {
+            "word": "eval"
+          },
+          {
+            "word": "\"$cmd\"",
+            "flags": 3
+          }
+        ],
+        "redirects": []
+      }
+    }
+  }
+}

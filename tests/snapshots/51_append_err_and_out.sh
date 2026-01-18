@@ -1,0 +1,1 @@
+cmd &>> combined.log

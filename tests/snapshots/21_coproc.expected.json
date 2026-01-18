@@ -1,0 +1,35 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "coproc",
+    "name": "COPROC",
+    "body": {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "cat"
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "right": {
+    "type": "coproc",
+    "name": "MYPROC",
+    "body": {
+      "type": "group",
+      "body": {
+        "type": "simple",
+        "line": 2,
+        "words": [
+          {
+            "word": "cat"
+          }
+        ],
+        "redirects": []
+      }
+    }
+  }
+}

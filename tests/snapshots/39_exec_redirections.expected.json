@@ -1,0 +1,252 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "list",
+              "op": "semi",
+              "left": {
+                "type": "list",
+                "op": "semi",
+                "left": {
+                  "type": "list",
+                  "op": "semi",
+                  "left": {
+                    "type": "list",
+                    "op": "semi",
+                    "left": {
+                      "type": "list",
+                      "op": "semi",
+                      "left": {
+                        "type": "simple",
+                        "line": 1,
+                        "words": [
+                          {
+                            "word": "exec"
+                          }
+                        ],
+                        "redirects": [
+                          {
+                            "direction": "dup_output",
+                            "source_fd": 3,
+                            "target": 1
+                          }
+                        ]
+                      },
+                      "right": {
+                        "type": "simple",
+                        "line": 2,
+                        "words": [
+                          {
+                            "word": "exec"
+                          }
+                        ],
+                        "redirects": [
+                          {
+                            "direction": "dup_output",
+                            "source_fd": 4,
+                            "target": 2
+                          }
+                        ]
+                      }
+                    },
+                    "right": {
+                      "type": "simple",
+                      "line": 3,
+                      "words": [
+                        {
+                          "word": "exec"
+                        }
+                      ],
+                      "redirects": [
+                        {
+                          "direction": "output",
+                          "source_fd": 1,
+                          "target": "stdout.log"
+                        }
+                      ]
+                    }
+                  },
+                  "right": {
+                    "type": "simple",
+                    "line": 4,
+                    "words": [
+                      {
+                        "word": "exec"
+                      }
+                    ],
+                    "redirects": [
+                      {
+                        "direction": "output",
+                        "source_fd": 2,
+                        "target": "stderr.log"
+                      }
+                    ]
+                  }
+                },
+                "right": {
+                  "type": "simple",
+                  "line": 6,
+                  "words": [
+                    {
+                      "word": "echo"
+                    },
+                    {
+                      "word": "\"This goes to stdout.log\"",
+                      "flags": 2
+                    }
+                  ],
+                  "redirects": []
+                }
+              },
+              "right": {
+                "type": "simple",
+                "line": 7,
+                "words": [
+                  {
+                    "word": "echo"
+                  },
+                  {
+                    "word": "\"This goes to stderr.log\"",
+                    "flags": 2
+                  }
+                ],
+                "redirects": [
+                  {
+                    "direction": "dup_output",
+                    "source_fd": 1,
+                    "target": 2
+                  }
+                ]
+              }
+            },
+            "right": {
+              "type": "simple",
+              "line": 9,
+              "words": [
+                {
+                  "word": "exec"
+                }
+              ],
+              "redirects": [
+                {
+                  "direction": "dup_output",
+                  "source_fd": 1,
+                  "target": 3
+                },
+                {
+                  "direction": "close",
+                  "source_fd": 3,
+                  "target": -1
+                }
+              ]
+            }
+          },
+          "right": {
+            "type": "simple",
+            "line": 10,
+            "words": [
+              {
+                "word": "exec"
+              }
+            ],
+            "redirects": [
+              {
+                "direction": "dup_output",
+                "source_fd": 2,
+                "target": 4
+              },
+              {
+                "direction": "close",
+                "source_fd": 4,
+                "target": -1
+              }
+            ]
+          }
+        },
+        "right": {
+          "type": "simple",
+          "line": 12,
+          "words": [
+            {
+              "word": "exec"
+            }
+          ],
+          "redirects": [
+            {
+              "direction": "input_output",
+              "source_fd": 5,
+              "target": "/tmp/fifo"
+            }
+          ]
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 13,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "\"data\"",
+            "flags": 2
+          }
+        ],
+        "redirects": [
+          {
+            "direction": "dup_output",
+            "source_fd": 1,
+            "target": 5
+          }
+        ]
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 14,
+      "words": [
+        {
+          "word": "read"
+        },
+        {
+          "word": "-u5"
+        },
+        {
+          "word": "response"
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 15,
+    "words": [
+      {
+        "word": "exec"
+      }
+    ],
+    "redirects": [
+      {
+        "direction": "close",
+        "source_fd": 5,
+        "target": -1
+      }
+    ]
+  }
+}

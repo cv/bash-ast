@@ -1,0 +1,67 @@
+{
+  "type": "pipeline",
+  "commands": [
+    {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "cat"
+        },
+        {
+          "word": "file.txt"
+        }
+      ],
+      "redirects": []
+    },
+    {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "grep"
+        },
+        {
+          "word": "pattern"
+        }
+      ],
+      "redirects": []
+    },
+    {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "sort"
+        }
+      ],
+      "redirects": []
+    },
+    {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "uniq"
+        },
+        {
+          "word": "-c"
+        }
+      ],
+      "redirects": []
+    },
+    {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "head"
+        },
+        {
+          "word": "-10"
+        }
+      ],
+      "redirects": []
+    }
+  ]
+}

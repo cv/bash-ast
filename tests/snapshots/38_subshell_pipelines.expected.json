@@ -1,0 +1,181 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "pipeline",
+      "commands": [
+        {
+          "type": "subshell",
+          "line": 4,
+          "body": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "simple",
+              "line": 2,
+              "words": [
+                {
+                  "word": "cd"
+                },
+                {
+                  "word": "/var/log"
+                }
+              ],
+              "redirects": []
+            },
+            "right": {
+              "type": "pipeline",
+              "commands": [
+                {
+                  "type": "simple",
+                  "line": 3,
+                  "words": [
+                    {
+                      "word": "cat"
+                    },
+                    {
+                      "word": "syslog"
+                    }
+                  ],
+                  "redirects": []
+                },
+                {
+                  "type": "simple",
+                  "line": 3,
+                  "words": [
+                    {
+                      "word": "grep"
+                    },
+                    {
+                      "word": "error"
+                    }
+                  ],
+                  "redirects": []
+                },
+                {
+                  "type": "simple",
+                  "line": 3,
+                  "words": [
+                    {
+                      "word": "tail"
+                    },
+                    {
+                      "word": "-100"
+                    }
+                  ],
+                  "redirects": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "simple",
+          "line": 4,
+          "words": [
+            {
+              "word": "mail"
+            },
+            {
+              "word": "-s"
+            },
+            {
+              "word": "\"Errors\"",
+              "flags": 2
+            },
+            {
+              "word": "admin@example.com"
+            }
+          ],
+          "redirects": []
+        }
+      ]
+    },
+    "right": {
+      "type": "simple",
+      "line": 10,
+      "words": [],
+      "redirects": [],
+      "assignments": [
+        "result=$(find . -type f -name \"*.log\" | xargs grep -l \"FATAL\" | wc -l)"
+      ]
+    }
+  },
+  "right": {
+    "type": "pipeline",
+    "commands": [
+      {
+        "type": "subshell",
+        "line": 12,
+        "body": {
+          "type": "list",
+          "op": "amp",
+          "left": {
+            "type": "list",
+            "op": "amp",
+            "left": {
+              "type": "list",
+              "op": "amp",
+              "left": {
+                "type": "simple",
+                "line": 12,
+                "words": [
+                  {
+                    "word": "cmd1"
+                  }
+                ],
+                "redirects": []
+              },
+              "right": {
+                "type": "simple",
+                "line": 12,
+                "words": [
+                  {
+                    "word": "cmd2"
+                  }
+                ],
+                "redirects": []
+              }
+            },
+            "right": {
+              "type": "simple",
+              "line": 12,
+              "words": [
+                {
+                  "word": "cmd3"
+                }
+              ],
+              "redirects": []
+            }
+          },
+          "right": {
+            "type": "simple",
+            "line": 12,
+            "words": [
+              {
+                "word": "wait"
+              }
+            ],
+            "redirects": []
+          }
+        }
+      },
+      {
+        "type": "simple",
+        "line": 12,
+        "words": [
+          {
+            "word": "tee"
+          },
+          {
+            "word": "output.log"
+          }
+        ],
+        "redirects": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "simple",
+              "line": 1,
+              "words": [
+                {
+                  "word": "echo"
+                },
+                {
+                  "word": "$HOME",
+                  "flags": 1
+                }
+              ],
+              "redirects": []
+            },
+            "right": {
+              "type": "simple",
+              "line": 2,
+              "words": [
+                {
+                  "word": "echo"
+                },
+                {
+                  "word": "${var:-default}",
+                  "flags": 1
+                }
+              ],
+              "redirects": []
+            }
+          },
+          "right": {
+            "type": "simple",
+            "line": 3,
+            "words": [
+              {
+                "word": "echo"
+              },
+              {
+                "word": "${#var}",
+                "flags": 1
+              }
+            ],
+            "redirects": []
+          }
+        },
+        "right": {
+          "type": "simple",
+          "line": 4,
+          "words": [
+            {
+              "word": "echo"
+            },
+            {
+              "word": "$(pwd)",
+              "flags": 1
+            }
+          ],
+          "redirects": []
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 5,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "`date`"
+          }
+        ],
+        "redirects": []
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 6,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "$((1 + 2))",
+          "flags": 1
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 7,
+    "words": [
+      {
+        "word": "echo"
+      },
+      {
+        "word": "{a,b,c}"
+      }
+    ],
+    "redirects": []
+  }
+}

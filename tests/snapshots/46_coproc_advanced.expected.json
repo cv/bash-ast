@@ -1,0 +1,223 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "list",
+              "op": "semi",
+              "left": {
+                "type": "coproc",
+                "name": "BC",
+                "body": {
+                  "type": "group",
+                  "body": {
+                    "type": "simple",
+                    "line": 1,
+                    "words": [
+                      {
+                        "word": "bc"
+                      },
+                      {
+                        "word": "-l"
+                      }
+                    ],
+                    "redirects": []
+                  }
+                }
+              },
+              "right": {
+                "type": "simple",
+                "line": 3,
+                "words": [
+                  {
+                    "word": "echo"
+                  },
+                  {
+                    "word": "\"scale=10; 4*a(1)\"",
+                    "flags": 2
+                  }
+                ],
+                "redirects": [
+                  {
+                    "direction": "dup_output",
+                    "source_fd": 1,
+                    "target": "${BC[1]}"
+                  }
+                ]
+              }
+            },
+            "right": {
+              "type": "simple",
+              "line": 4,
+              "words": [
+                {
+                  "word": "read"
+                },
+                {
+                  "word": "-r"
+                },
+                {
+                  "word": "pi"
+                }
+              ],
+              "redirects": [
+                {
+                  "direction": "dup_input",
+                  "source_fd": 0,
+                  "target": "${BC[0]}"
+                }
+              ]
+            }
+          },
+          "right": {
+            "type": "simple",
+            "line": 5,
+            "words": [
+              {
+                "word": "echo"
+              },
+              {
+                "word": "\"Pi = $pi\"",
+                "flags": 3
+              }
+            ],
+            "redirects": []
+          }
+        },
+        "right": {
+          "type": "simple",
+          "line": 7,
+          "words": [
+            {
+              "word": "echo"
+            },
+            {
+              "word": "\"quit\"",
+              "flags": 2
+            }
+          ],
+          "redirects": [
+            {
+              "direction": "dup_output",
+              "source_fd": 1,
+              "target": "${BC[1]}"
+            }
+          ]
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 8,
+        "words": [
+          {
+            "word": "wait"
+          },
+          {
+            "word": "$BC_PID",
+            "flags": 1
+          }
+        ],
+        "redirects": []
+      }
+    },
+    "right": {
+      "type": "coproc",
+      "name": "FILTER",
+      "body": {
+        "type": "group",
+        "body": {
+          "type": "while",
+          "test": {
+            "type": "simple",
+            "line": 11,
+            "words": [
+              {
+                "word": "read"
+              },
+              {
+                "word": "-r"
+              },
+              {
+                "word": "line"
+              }
+            ],
+            "redirects": []
+          },
+          "body": {
+            "type": "list",
+            "op": "and",
+            "left": {
+              "type": "conditional",
+              "line": 12,
+              "expr": {
+                "cond_type": "binary",
+                "op": "==",
+                "left": "$line",
+                "right": "*error*"
+              }
+            },
+            "right": {
+              "type": "simple",
+              "line": 12,
+              "words": [
+                {
+                  "word": "echo"
+                },
+                {
+                  "word": "\"$line\"",
+                  "flags": 3
+                }
+              ],
+              "redirects": []
+            }
+          }
+        }
+      }
+    }
+  },
+  "right": {
+    "type": "list",
+    "op": "amp",
+    "left": {
+      "type": "simple",
+      "line": 16,
+      "words": [
+        {
+          "word": "tail"
+        },
+        {
+          "word": "-f"
+        },
+        {
+          "word": "/var/log/syslog"
+        }
+      ],
+      "redirects": [
+        {
+          "direction": "dup_output",
+          "source_fd": 1,
+          "target": "${FILTER[1]}"
+        }
+      ]
+    },
+    "right": {
+      "type": "simple",
+      "words": [],
+      "redirects": []
+    }
+  }
+}

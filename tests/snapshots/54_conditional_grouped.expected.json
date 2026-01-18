@@ -1,0 +1,78 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "conditional",
+      "line": 1,
+      "expr": {
+        "cond_type": "expr",
+        "expr": {
+          "cond_type": "and",
+          "left": {
+            "cond_type": "unary",
+            "op": "-f",
+            "arg": "x"
+          },
+          "right": {
+            "cond_type": "unary",
+            "op": "-r",
+            "arg": "x"
+          }
+        }
+      }
+    },
+    "right": {
+      "type": "conditional",
+      "line": 2,
+      "expr": {
+        "cond_type": "and",
+        "left": {
+          "cond_type": "expr",
+          "expr": {
+            "cond_type": "or",
+            "left": {
+              "cond_type": "binary",
+              "op": "==",
+              "left": "$a",
+              "right": "1"
+            },
+            "right": {
+              "cond_type": "binary",
+              "op": "==",
+              "left": "$a",
+              "right": "2"
+            }
+          }
+        },
+        "right": {
+          "cond_type": "unary",
+          "op": "-n",
+          "arg": "$b"
+        }
+      }
+    }
+  },
+  "right": {
+    "type": "conditional",
+    "line": 3,
+    "expr": {
+      "cond_type": "expr",
+      "expr": {
+        "cond_type": "and",
+        "left": {
+          "cond_type": "unary",
+          "op": "-d",
+          "arg": "dir"
+        },
+        "right": {
+          "cond_type": "unary",
+          "op": "-w",
+          "arg": "dir"
+        }
+      }
+    }
+  }
+}

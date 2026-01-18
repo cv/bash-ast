@@ -1,0 +1,18 @@
+{
+  "type": "simple",
+  "line": 1,
+  "words": [
+    {
+      "word": "diff"
+    },
+    {
+      "word": "<(ls dir1)",
+      "flags": 1
+    },
+    {
+      "word": "<(ls dir2)",
+      "flags": 1
+    }
+  ],
+  "redirects": []
+}

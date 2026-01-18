@@ -1,0 +1,145 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "function_def",
+            "name": "cleanup",
+            "body": {
+              "type": "group",
+              "line": 1,
+              "body": {
+                "type": "list",
+                "op": "semi",
+                "left": {
+                  "type": "simple",
+                  "line": 2,
+                  "words": [
+                    {
+                      "word": "rm"
+                    },
+                    {
+                      "word": "-f"
+                    },
+                    {
+                      "word": "\"$TMPFILE\"",
+                      "flags": 3
+                    }
+                  ],
+                  "redirects": []
+                },
+                "right": {
+                  "type": "simple",
+                  "line": 3,
+                  "words": [
+                    {
+                      "word": "echo"
+                    },
+                    {
+                      "word": "\"Cleaned up\"",
+                      "flags": 2
+                    }
+                  ],
+                  "redirects": []
+                }
+              }
+            }
+          },
+          "right": {
+            "type": "simple",
+            "line": 6,
+            "words": [
+              {
+                "word": "trap"
+              },
+              {
+                "word": "cleanup"
+              },
+              {
+                "word": "EXIT"
+              }
+            ],
+            "redirects": []
+          }
+        },
+        "right": {
+          "type": "simple",
+          "line": 7,
+          "words": [
+            {
+              "word": "trap"
+            },
+            {
+              "word": "'echo \"Interrupted\"; exit 130'",
+              "flags": 2
+            },
+            {
+              "word": "INT"
+            },
+            {
+              "word": "TERM"
+            }
+          ],
+          "redirects": []
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 8,
+        "words": [
+          {
+            "word": "trap"
+          },
+          {
+            "word": "''",
+            "flags": 2
+          },
+          {
+            "word": "HUP"
+          }
+        ],
+        "redirects": []
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 10,
+      "words": [],
+      "redirects": [],
+      "assignments": [
+        "TMPFILE=$(mktemp)"
+      ]
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 11,
+    "words": [
+      {
+        "word": "echo"
+      },
+      {
+        "word": "\"Working...\"",
+        "flags": 2
+      }
+    ],
+    "redirects": [
+      {
+        "direction": "output",
+        "source_fd": 1,
+        "target": "\"$TMPFILE\""
+      }
+    ]
+  }
+}

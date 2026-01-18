@@ -1,0 +1,23 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "arithmetic",
+      "line": 1,
+      "expression": " x = 1 + 2 * 3 "
+    },
+    "right": {
+      "type": "arithmetic",
+      "line": 2,
+      "expression": " y++ "
+    }
+  },
+  "right": {
+    "type": "arithmetic",
+    "line": 3,
+    "expression": " z = x > y ? x : y "
+  }
+}

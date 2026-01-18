@@ -1,0 +1,110 @@
+{
+  "type": "for",
+  "line": 1,
+  "variable": "config",
+  "words": [
+    "/etc/*.conf"
+  ],
+  "body": {
+    "type": "if",
+    "condition": {
+      "type": "conditional",
+      "line": 2,
+      "expr": {
+        "cond_type": "unary",
+        "op": "-r",
+        "arg": "\"$config\""
+      }
+    },
+    "then_branch": {
+      "type": "while",
+      "test": {
+        "type": "simple",
+        "line": 3,
+        "words": [
+          {
+            "word": "read"
+          },
+          {
+            "word": "-r"
+          },
+          {
+            "word": "key"
+          },
+          {
+            "word": "value"
+          }
+        ],
+        "redirects": [],
+        "assignments": [
+          "IFS='='"
+        ]
+      },
+      "body": {
+        "type": "case",
+        "line": 4,
+        "word": "\"$key\"",
+        "clauses": [
+          {
+            "patterns": [
+              "\\#*",
+              "\"\""
+            ],
+            "action": {
+              "type": "simple",
+              "line": 5,
+              "words": [
+                {
+                  "word": "continue"
+                }
+              ],
+              "redirects": []
+            }
+          },
+          {
+            "patterns": [
+              "timeout"
+            ],
+            "action": {
+              "type": "list",
+              "op": "and",
+              "left": {
+                "type": "arithmetic",
+                "line": 6,
+                "expression": " value > 0 "
+              },
+              "right": {
+                "type": "simple",
+                "line": 6,
+                "words": [],
+                "redirects": [],
+                "assignments": [
+                  "TIMEOUT=$value"
+                ]
+              }
+            }
+          },
+          {
+            "patterns": [
+              "*"
+            ],
+            "action": {
+              "type": "simple",
+              "line": 7,
+              "words": [
+                {
+                  "word": "export"
+                },
+                {
+                  "word": "\"$key=$value\"",
+                  "flags": 3
+                }
+              ],
+              "redirects": []
+            }
+          }
+        ]
+      }
+    }
+  }
+}

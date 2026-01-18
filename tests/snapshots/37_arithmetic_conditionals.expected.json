@@ -1,0 +1,107 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "if",
+              "condition": {
+                "type": "arithmetic",
+                "line": 1,
+                "expression": " x > 0 && x < 100 "
+              },
+              "then_branch": {
+                "type": "simple",
+                "line": 2,
+                "words": [
+                  {
+                    "word": "echo"
+                  },
+                  {
+                    "word": "\"In range\"",
+                    "flags": 2
+                  }
+                ],
+                "redirects": []
+              }
+            },
+            "right": {
+              "type": "while",
+              "test": {
+                "type": "arithmetic",
+                "line": 5,
+                "expression": " i++ < 10 "
+              },
+              "body": {
+                "type": "arithmetic",
+                "line": 6,
+                "expression": " sum += i "
+              }
+            }
+          },
+          "right": {
+            "type": "arithmetic",
+            "line": 9,
+            "expression": " result = a > b ? a : b "
+          }
+        },
+        "right": {
+          "type": "arithmetic",
+          "line": 10,
+          "expression": " flag = !flag "
+        }
+      },
+      "right": {
+        "type": "arithmetic",
+        "line": 11,
+        "expression": " bits = (1 << n) | mask "
+      }
+    },
+    "right": {
+      "type": "arithmetic",
+      "line": 12,
+      "expression": " value = base ** exp % mod "
+    }
+  },
+  "right": {
+    "type": "list",
+    "op": "and",
+    "left": {
+      "type": "conditional",
+      "line": 14,
+      "expr": {
+        "cond_type": "binary",
+        "op": "-eq",
+        "left": "$((x % 2))",
+        "right": "0"
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 14,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "\"Even\"",
+          "flags": 2
+        }
+      ],
+      "redirects": []
+    }
+  }
+}

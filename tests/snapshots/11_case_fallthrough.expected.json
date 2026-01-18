@@ -1,0 +1,70 @@
+{
+  "type": "case",
+  "line": 1,
+  "word": "\"$x\"",
+  "clauses": [
+    {
+      "patterns": [
+        "a"
+      ],
+      "action": {
+        "type": "simple",
+        "line": 1,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "\"a\"",
+            "flags": 2
+          }
+        ],
+        "redirects": []
+      },
+      "flags": {
+        "fallthrough": true
+      }
+    },
+    {
+      "patterns": [
+        "b"
+      ],
+      "action": {
+        "type": "simple",
+        "line": 1,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "\"b\"",
+            "flags": 2
+          }
+        ],
+        "redirects": []
+      },
+      "flags": {
+        "test_next": true
+      }
+    },
+    {
+      "patterns": [
+        "c"
+      ],
+      "action": {
+        "type": "simple",
+        "line": 1,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "\"c\"",
+            "flags": 2
+          }
+        ],
+        "redirects": []
+      }
+    }
+  ]
+}

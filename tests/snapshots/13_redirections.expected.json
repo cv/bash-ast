@@ -1,0 +1,142 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "simple",
+              "line": 1,
+              "words": [
+                {
+                  "word": "echo"
+                },
+                {
+                  "word": "hello"
+                }
+              ],
+              "redirects": [
+                {
+                  "direction": "output",
+                  "source_fd": 1,
+                  "target": "out.txt"
+                }
+              ]
+            },
+            "right": {
+              "type": "simple",
+              "line": 2,
+              "words": [
+                {
+                  "word": "cat"
+                }
+              ],
+              "redirects": [
+                {
+                  "direction": "input",
+                  "source_fd": 0,
+                  "target": "in.txt"
+                }
+              ]
+            }
+          },
+          "right": {
+            "type": "simple",
+            "line": 3,
+            "words": [
+              {
+                "word": "echo"
+              },
+              {
+                "word": "append"
+              }
+            ],
+            "redirects": [
+              {
+                "direction": "append",
+                "source_fd": 1,
+                "target": "log.txt"
+              }
+            ]
+          }
+        },
+        "right": {
+          "type": "simple",
+          "line": 4,
+          "words": [
+            {
+              "word": "cmd"
+            }
+          ],
+          "redirects": [
+            {
+              "direction": "dup_output",
+              "source_fd": 2,
+              "target": 1
+            }
+          ]
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 5,
+        "words": [
+          {
+            "word": "cmd"
+          }
+        ],
+        "redirects": [
+          {
+            "direction": "err_and_out",
+            "source_fd": 1,
+            "target": "all.txt"
+          }
+        ]
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 6,
+      "words": [
+        {
+          "word": "exec"
+        }
+      ],
+      "redirects": [
+        {
+          "direction": "close",
+          "source_fd": 3,
+          "target": -1
+        }
+      ]
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 7,
+    "words": [
+      {
+        "word": "cmd"
+      }
+    ],
+    "redirects": [
+      {
+        "direction": "clobber",
+        "source_fd": 1,
+        "target": "force.txt"
+      }
+    ]
+  }
+}

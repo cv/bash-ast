@@ -1,0 +1,349 @@
+//! bash-ast CLI tool
+//!
+//! Parses bash scripts and outputs JSON AST.
+
+use bash_ast::{init, parse_to_json, schema_json};
+use std::env;
+use std::fs;
+use std::io::{self, BufRead, Write};
+use std::process::ExitCode;
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+const HELP: &str = r"bash-ast - Parse bash scripts to JSON AST
+
+USAGE:
+    bash-ast [OPTIONS] [FILE]
+    command | bash-ast [OPTIONS]
+
+DESCRIPTION:
+    Parses bash scripts using GNU Bash's actual parser (via FFI) and outputs
+    a JSON representation of the Abstract Syntax Tree. This provides 100%
+    compatibility with bash syntax.
+
+ARGUMENTS:
+    [FILE]    Bash script file to parse. If omitted, reads from stdin.
+
+OPTIONS:
+    -h, --help       Print this help message and exit
+    -V, --version    Print version information and exit
+    -c, --compact    Output compact JSON (default: pretty-printed)
+    -s, --schema     Print JSON Schema for the AST and exit
+
+EXAMPLES:
+    # Parse a script file
+    bash-ast script.sh
+
+    # Parse from stdin
+    echo 'echo hello' | bash-ast
+
+    # Parse inline with here-string
+    bash-ast <<< 'for i in a b c; do echo $i; done'
+
+    # Compact output for piping
+    bash-ast -c script.sh | jq '.commands[]'
+
+    # Print JSON Schema for the AST output
+    bash-ast --schema > schema.json
+
+OUTPUT:
+    On success, prints JSON AST to stdout and exits with code 0.
+    On error, prints error message to stderr and exits with code 1.
+
+    The JSON structure includes:
+    - type: Command type (simple, pipeline, for, if, while, case, etc.)
+    - line: Source line number
+    - Command-specific fields (words, redirects, body, etc.)
+
+    Use --schema to get a complete JSON Schema describing the output format.
+
+SUPPORTED CONSTRUCTS:
+    All bash command types are supported:
+    • Simple commands      cmd arg1 arg2
+    • Pipelines            cmd1 | cmd2
+    • Lists                cmd1 && cmd2, cmd1 || cmd2, cmd1 ; cmd2
+    • For loops            for var in list; do ...; done
+    • C-style for          for ((i=0; i<n; i++)); do ...; done
+    • While/Until loops    while cmd; do ...; done
+    • If statements        if cmd; then ...; elif ...; else ...; fi
+    • Case statements      case $var in pattern) ...; esac
+    • Select statements    select var in list; do ...; done
+    • Group commands       { cmd1; cmd2; }
+    • Subshells            ( cmd1; cmd2 )
+    • Functions            name() { ...; }
+    • Arithmetic           (( expr ))
+    • Conditionals         [[ expr ]]
+    • Coprocesses          coproc name { ...; }
+
+MORE INFO:
+    Repository: https://github.com/cv/bash-ast
+    License:    GPL-3.0 (due to linkage with GNU Bash)
+";
+
+fn main() -> ExitCode {
+    let args: Vec<String> = env::args().collect();
+    run(&args[1..], io::stdin().lock(), io::stdout(), io::stderr())
+}
+
+#[derive(Debug, Default)]
+#[allow(clippy::struct_excessive_bools)]
+struct Config {
+    help: bool,
+    version: bool,
+    compact: bool,
+    schema: bool,
+    file: Option<String>,
+}
+
+fn parse_args(args: &[String]) -> Result<Config, String> {
+    let mut config = Config::default();
+    let mut positional = Vec::new();
+
+    for arg in args {
+        match arg.as_str() {
+            "-h" | "--help" => config.help = true,
+            "-V" | "--version" => config.version = true,
+            "-c" | "--compact" => config.compact = true,
+            "-s" | "--schema" => config.schema = true,
+            s if s.starts_with('-') => {
+                return Err(format!(
+                    "Unknown option: {s}\nTry 'bash-ast --help' for usage."
+                ));
+            }
+            _ => positional.push(arg.clone()),
+        }
+    }
+
+    if positional.len() > 1 {
+        return Err(
+            "Too many arguments. Expected at most one file.\nTry 'bash-ast --help' for usage."
+                .to_string(),
+        );
+    }
+
+    config.file = positional.into_iter().next();
+    Ok(config)
+}
+
+/// Run the CLI with the given arguments and input/output streams
+fn run<R, W, E>(args: &[String], mut input: R, mut output: W, mut error: E) -> ExitCode
+where
+    R: BufRead,
+    W: Write,
+    E: Write,
+{
+    // Parse command line arguments
+    let config = match parse_args(args) {
+        Ok(c) => c,
+        Err(e) => {
+            let _ = writeln!(error, "Error: {e}");
+            return ExitCode::from(2);
+        }
+    };
+
+    // Handle --help
+    if config.help {
+        let _ = write!(output, "{HELP}");
+        return ExitCode::SUCCESS;
+    }
+
+    // Handle --version
+    if config.version {
+        let _ = writeln!(output, "bash-ast {VERSION}");
+        return ExitCode::SUCCESS;
+    }
+
+    // Handle --schema
+    if config.schema {
+        let pretty = !config.compact;
+        let _ = writeln!(output, "{}", schema_json(pretty));
+        return ExitCode::SUCCESS;
+    }
+
+    // Read script from file or stdin
+    let script = if let Some(ref path) = config.file {
+        match fs::read_to_string(path) {
+            Ok(content) => content,
+            Err(e) => {
+                let _ = writeln!(error, "Error reading '{path}': {e}");
+                return ExitCode::from(1);
+            }
+        }
+    } else {
+        let mut content = String::new();
+        if let Err(e) = input.read_to_string(&mut content) {
+            let _ = writeln!(error, "Error reading stdin: {e}");
+            return ExitCode::from(1);
+        }
+        content
+    };
+
+    // Initialize bash parser
+    init();
+
+    // Parse and output JSON
+    let pretty = !config.compact;
+    match parse_to_json(&script, pretty) {
+        Ok(json) => {
+            let _ = writeln!(output, "{json}");
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            let _ = writeln!(error, "Error: {e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    /// Test helper that captures output and runs the CLI
+    struct TestRun {
+        exit_code: ExitCode,
+        stdout: String,
+        stderr: String,
+    }
+
+    impl TestRun {
+        /// Run CLI with given args and stdin content
+        fn new(cli_args: &[&str], stdin: &str) -> Self {
+            let input = Cursor::new(stdin.to_string());
+            let mut output = Vec::new();
+            let mut error = Vec::new();
+
+            let args: Vec<String> = cli_args.iter().map(|&s| s.to_string()).collect();
+            let exit_code = run(&args, input, &mut output, &mut error);
+
+            Self {
+                exit_code,
+                stdout: String::from_utf8(output).unwrap(),
+                stderr: String::from_utf8(error).unwrap(),
+            }
+        }
+
+        fn success(&self) -> bool {
+            self.exit_code == ExitCode::SUCCESS
+        }
+    }
+
+    #[test]
+    fn test_help_short() {
+        let t = TestRun::new(&["-h"], "");
+        assert!(t.success());
+        assert!(t.stdout.contains("USAGE:"));
+        assert!(t.stdout.contains("bash-ast"));
+        assert!(t.stderr.is_empty());
+    }
+
+    #[test]
+    fn test_help_long() {
+        let t = TestRun::new(&["--help"], "");
+        assert!(t.success());
+        assert!(t.stdout.contains("EXAMPLES:"));
+        assert!(t.stdout.contains("SUPPORTED CONSTRUCTS:"));
+    }
+
+    #[test]
+    fn test_version_short() {
+        let t = TestRun::new(&["-V"], "");
+        assert!(t.success());
+        assert!(t.stdout.contains("bash-ast"));
+        assert!(t.stdout.contains(VERSION));
+    }
+
+    #[test]
+    fn test_version_long() {
+        let t = TestRun::new(&["--version"], "");
+        assert!(t.success());
+        assert!(t.stdout.starts_with("bash-ast "));
+    }
+
+    #[test]
+    fn test_schema() {
+        let t = TestRun::new(&["--schema"], "");
+        assert!(t.success());
+        assert!(t.stdout.contains("\"$schema\""));
+        assert!(t.stdout.contains("\"title\": \"Command\""));
+        assert!(t.stderr.is_empty());
+    }
+
+    #[test]
+    fn test_schema_compact() {
+        let t = TestRun::new(&["-s", "-c"], "");
+        assert!(t.success());
+        assert_eq!(t.stdout.lines().count(), 1);
+        assert!(t.stdout.contains("\"$schema\""));
+    }
+
+    #[test]
+    fn test_unknown_option() {
+        let t = TestRun::new(&["--foo"], "");
+        assert_eq!(t.exit_code, ExitCode::from(2));
+        assert!(t.stderr.contains("Unknown option"));
+        assert!(t.stderr.contains("--foo"));
+    }
+
+    #[test]
+    fn test_too_many_args() {
+        let t = TestRun::new(&["file1.sh", "file2.sh"], "");
+        assert_eq!(t.exit_code, ExitCode::from(2));
+        assert!(t.stderr.contains("Too many arguments"));
+    }
+
+    #[test]
+    fn test_stdin_simple_command() {
+        let t = TestRun::new(&[], "echo hello world");
+        assert!(t.success());
+        assert!(t.stdout.contains("\"type\": \"simple\""));
+        assert!(t.stdout.contains("echo"));
+        assert!(t.stderr.is_empty());
+    }
+
+    #[test]
+    fn test_compact_output() {
+        let t = TestRun::new(&["-c"], "echo hello");
+        assert!(t.success());
+        assert_eq!(t.stdout.lines().count(), 1);
+        assert!(t.stdout.contains("\"type\":\"simple\""));
+    }
+
+    #[test]
+    fn test_compact_long_option() {
+        let t = TestRun::new(&["--compact"], "echo hello");
+        assert!(t.success());
+        assert_eq!(t.stdout.lines().count(), 1);
+    }
+
+    #[test]
+    fn test_syntax_error() {
+        let t = TestRun::new(&[], "if then fi");
+        assert_eq!(t.exit_code, ExitCode::from(1));
+        assert!(t.stderr.contains("Error"));
+    }
+
+    #[test]
+    fn test_empty_input() {
+        let t = TestRun::new(&[], "");
+        assert_eq!(t.exit_code, ExitCode::from(1));
+        assert!(t.stderr.contains("Error"));
+    }
+
+    #[test]
+    fn test_file_not_found() {
+        let t = TestRun::new(&["nonexistent.sh"], "");
+        assert_eq!(t.exit_code, ExitCode::from(1));
+        assert!(t.stderr.contains("Error reading"));
+        assert!(t.stderr.contains("nonexistent.sh"));
+    }
+
+    #[test]
+    fn test_complex_script() {
+        let t = TestRun::new(&[], "for i in a b c; do echo $i; done");
+        assert!(t.success());
+        assert!(t.stdout.contains("\"type\": \"for\""));
+        assert!(t.stderr.is_empty());
+    }
+}

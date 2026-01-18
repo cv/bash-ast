@@ -1,0 +1,88 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "simple",
+            "line": 1,
+            "words": [
+              {
+                "word": "echo"
+              },
+              {
+                "word": "\"$(echo \"$(echo \"deep\")\")\"",
+                "flags": 3
+              }
+            ],
+            "redirects": []
+          },
+          "right": {
+            "type": "simple",
+            "line": 3,
+            "words": [],
+            "redirects": [],
+            "assignments": [
+              "result=$(cat <<< \"$(date +%Y)-$(hostname)-$(whoami)\")"
+            ]
+          }
+        },
+        "right": {
+          "type": "simple",
+          "line": 5,
+          "words": [],
+          "redirects": [],
+          "assignments": [
+            "version=$(grep -oP 'version=\\K[0-9.]+' <<< \"$(cat config.txt)\")"
+          ]
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 7,
+        "words": [],
+        "redirects": [],
+        "assignments": [
+          "files=$(find . -name \"$(basename \"$(pwd)\")*.txt\")"
+        ]
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 9,
+      "words": [
+        {
+          "word": "eval"
+        },
+        {
+          "word": "\"$(ssh-agent -s)\"",
+          "flags": 3
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 11,
+    "words": [
+      {
+        "word": "export"
+      }
+    ],
+    "redirects": [],
+    "assignments": [
+      "PATH=\"$(dirname \"$(which python)\")/../lib:$PATH\""
+    ]
+  }
+}

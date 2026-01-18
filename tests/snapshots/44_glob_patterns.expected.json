@@ -1,0 +1,143 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "simple",
+          "line": 1,
+          "words": [
+            {
+              "word": "shopt"
+            },
+            {
+              "word": "-s"
+            },
+            {
+              "word": "nullglob"
+            },
+            {
+              "word": "globstar"
+            }
+          ],
+          "redirects": []
+        },
+        "right": {
+          "type": "for",
+          "line": 3,
+          "variable": "f",
+          "words": [
+            "**/*.txt"
+          ],
+          "body": {
+            "type": "simple",
+            "line": 4,
+            "words": [
+              {
+                "word": "echo"
+              },
+              {
+                "word": "\"Doc: $f\"",
+                "flags": 3
+              }
+            ],
+            "redirects": []
+          }
+        }
+      },
+      "right": {
+        "type": "for",
+        "line": 7,
+        "variable": "f",
+        "words": [
+          "*.jpg",
+          "*.jpeg",
+          "*.png",
+          "*.gif"
+        ],
+        "body": {
+          "type": "simple",
+          "line": 8,
+          "words": [
+            {
+              "word": "echo"
+            },
+            {
+              "word": "\"Image: $f\"",
+              "flags": 3
+            }
+          ],
+          "redirects": []
+        }
+      }
+    },
+    "right": {
+      "type": "case",
+      "line": 11,
+      "word": "\"$file\"",
+      "clauses": [
+        {
+          "patterns": [
+            "*.tar",
+            "*.tar.gz",
+            "*.tgz",
+            "*.tar.bz2"
+          ],
+          "action": {
+            "type": "simple",
+            "line": 13,
+            "words": [
+              {
+                "word": "tar"
+              },
+              {
+                "word": "xf"
+              },
+              {
+                "word": "\"$file\"",
+                "flags": 3
+              }
+            ],
+            "redirects": []
+          }
+        },
+        {
+          "patterns": [
+            "*.zip"
+          ],
+          "action": {
+            "type": "simple",
+            "line": 15,
+            "words": [
+              {
+                "word": "unzip"
+              },
+              {
+                "word": "\"$file\"",
+                "flags": 3
+              }
+            ],
+            "redirects": []
+          }
+        }
+      ]
+    }
+  },
+  "right": {
+    "type": "conditional",
+    "line": 18,
+    "expr": {
+      "cond_type": "binary",
+      "op": "==",
+      "left": "$name",
+      "right": "[A-Z]*"
+    }
+  }
+}

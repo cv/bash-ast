@@ -1,0 +1,122 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "while",
+        "test": {
+          "type": "simple",
+          "line": 1,
+          "words": [
+            {
+              "word": "read"
+            },
+            {
+              "word": "-r"
+            },
+            {
+              "word": "line"
+            }
+          ],
+          "redirects": [],
+          "assignments": [
+            "IFS="
+          ]
+        },
+        "body": {
+          "type": "simple",
+          "line": 2,
+          "words": [
+            {
+              "word": "echo"
+            },
+            {
+              "word": "\"Processing: $line\"",
+              "flags": 3
+            }
+          ],
+          "redirects": []
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 5,
+        "words": [
+          {
+            "word": "paste"
+          },
+          {
+            "word": "<(cut -f1 file1.tsv)",
+            "flags": 1
+          },
+          {
+            "word": "<(cut -f2 file2.tsv)",
+            "flags": 1
+          }
+        ],
+        "redirects": [
+          {
+            "direction": "output",
+            "source_fd": 1,
+            "target": "merged.tsv"
+          }
+        ]
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 7,
+      "words": [
+        {
+          "word": "diff"
+        },
+        {
+          "word": "-u"
+        },
+        {
+          "word": "<(ssh server1 'cat /etc/config')",
+          "flags": 1
+        },
+        {
+          "word": "<(ssh server2 'cat /etc/config')",
+          "flags": 1
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 11,
+    "words": [
+      {
+        "word": "tee"
+      },
+      {
+        "word": ">(gzip > backup.gz)",
+        "flags": 1
+      },
+      {
+        "word": ">(wc -l > count.txt)",
+        "flags": 1
+      }
+    ],
+    "redirects": [
+      {
+        "direction": "input",
+        "source_fd": 0,
+        "target": "input.txt"
+      },
+      {
+        "direction": "output",
+        "source_fd": 1,
+        "target": "output.txt"
+      }
+    ]
+  }
+}

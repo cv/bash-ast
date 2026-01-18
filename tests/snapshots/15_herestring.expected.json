@@ -1,0 +1,16 @@
+{
+  "type": "simple",
+  "line": 1,
+  "words": [
+    {
+      "word": "cat"
+    }
+  ],
+  "redirects": [
+    {
+      "direction": "here_string",
+      "source_fd": 0,
+      "target": "\"this is a here-string\""
+    }
+  ]
+}

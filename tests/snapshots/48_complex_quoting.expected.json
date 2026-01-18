@@ -1,0 +1,166 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "list",
+              "op": "semi",
+              "left": {
+                "type": "list",
+                "op": "semi",
+                "left": {
+                  "type": "simple",
+                  "line": 1,
+                  "words": [
+                    {
+                      "word": "echo"
+                    },
+                    {
+                      "word": "'Single quotes: $VAR and `cmd` are literal'",
+                      "flags": 2
+                    }
+                  ],
+                  "redirects": []
+                },
+                "right": {
+                  "type": "simple",
+                  "line": 2,
+                  "words": [
+                    {
+                      "word": "echo"
+                    },
+                    {
+                      "word": "\"Double quotes: $VAR and $(cmd) are expanded\"",
+                      "flags": 3
+                    }
+                  ],
+                  "redirects": []
+                }
+              },
+              "right": {
+                "type": "simple",
+                "line": 3,
+                "words": [
+                  {
+                    "word": "echo"
+                  },
+                  {
+                    "word": "'ANSI-C: \t tab \n newline A'",
+                    "flags": 2
+                  }
+                ],
+                "redirects": []
+              }
+            },
+            "right": {
+              "type": "simple",
+              "line": 4,
+              "words": [
+                {
+                  "word": "echo"
+                },
+                {
+                  "word": "\"Locale: translated string\"",
+                  "flags": 2
+                }
+              ],
+              "redirects": []
+            }
+          },
+          "right": {
+            "type": "simple",
+            "line": 6,
+            "words": [],
+            "redirects": [],
+            "assignments": [
+              "cmd=\"echo 'nested \\\"quotes\\\" here'\""
+            ]
+          }
+        },
+        "right": {
+          "type": "simple",
+          "line": 7,
+          "words": [
+            {
+              "word": "eval"
+            },
+            {
+              "word": "\"$cmd\"",
+              "flags": 3
+            }
+          ],
+          "redirects": []
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 9,
+        "words": [
+          {
+            "word": "printf"
+          },
+          {
+            "word": "'%s\\n'",
+            "flags": 2
+          },
+          {
+            "word": "\"Line with\nactual newline\"",
+            "flags": 2
+          }
+        ],
+        "redirects": []
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 12,
+      "words": [
+        {
+          "word": "grep"
+        },
+        {
+          "word": "\"pattern with spaces\"",
+          "flags": 2
+        }
+      ],
+      "redirects": [
+        {
+          "direction": "here_string",
+          "source_fd": 0,
+          "target": "\"$var\""
+        }
+      ]
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 13,
+    "words": [
+      {
+        "word": "ssh"
+      },
+      {
+        "word": "host"
+      },
+      {
+        "word": "\"echo \\\"remote: \\$HOME\\\"\"",
+        "flags": 3
+      }
+    ],
+    "redirects": []
+  }
+}

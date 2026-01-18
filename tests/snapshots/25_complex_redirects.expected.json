@@ -1,0 +1,89 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "cmd"
+        }
+      ],
+      "redirects": [
+        {
+          "direction": "dup_output",
+          "source_fd": 2,
+          "target": 1
+        },
+        {
+          "direction": "dup_output",
+          "source_fd": 1,
+          "target": 3
+        },
+        {
+          "direction": "close",
+          "source_fd": 3,
+          "target": -1
+        }
+      ]
+    },
+    "right": {
+      "type": "group",
+      "body": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "simple",
+          "line": 2,
+          "words": [
+            {
+              "word": "cmd1"
+            }
+          ],
+          "redirects": []
+        },
+        "right": {
+          "type": "simple",
+          "line": 2,
+          "words": [
+            {
+              "word": "cmd2"
+            }
+          ],
+          "redirects": []
+        }
+      }
+    }
+  },
+  "right": {
+    "type": "subshell",
+    "line": 3,
+    "body": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "simple",
+        "line": 3,
+        "words": [
+          {
+            "word": "cmd1"
+          }
+        ],
+        "redirects": []
+      },
+      "right": {
+        "type": "simple",
+        "line": 3,
+        "words": [
+          {
+            "word": "cmd2"
+          }
+        ],
+        "redirects": []
+      }
+    }
+  }
+}

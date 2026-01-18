@@ -1,0 +1,130 @@
+{
+  "type": "if",
+  "condition": {
+    "type": "conditional",
+    "line": 1,
+    "expr": {
+      "cond_type": "unary",
+      "op": "-f",
+      "arg": "\"$1\""
+    }
+  },
+  "then_branch": {
+    "type": "if",
+    "condition": {
+      "type": "conditional",
+      "line": 2,
+      "expr": {
+        "cond_type": "unary",
+        "op": "-r",
+        "arg": "\"$1\""
+      }
+    },
+    "then_branch": {
+      "type": "if",
+      "condition": {
+        "type": "conditional",
+        "line": 3,
+        "expr": {
+          "cond_type": "unary",
+          "op": "-s",
+          "arg": "\"$1\""
+        }
+      },
+      "then_branch": {
+        "type": "if",
+        "condition": {
+          "type": "simple",
+          "line": 4,
+          "words": [
+            {
+              "word": "grep"
+            },
+            {
+              "word": "-q"
+            },
+            {
+              "word": "\"pattern\"",
+              "flags": 2
+            },
+            {
+              "word": "\"$1\"",
+              "flags": 3
+            }
+          ],
+          "redirects": []
+        },
+        "then_branch": {
+          "type": "simple",
+          "line": 5,
+          "words": [
+            {
+              "word": "echo"
+            },
+            {
+              "word": "\"Found pattern in non-empty readable file\"",
+              "flags": 2
+            }
+          ],
+          "redirects": []
+        },
+        "else_branch": {
+          "type": "simple",
+          "line": 7,
+          "words": [
+            {
+              "word": "echo"
+            },
+            {
+              "word": "\"Pattern not found\"",
+              "flags": 2
+            }
+          ],
+          "redirects": []
+        }
+      },
+      "else_branch": {
+        "type": "simple",
+        "line": 10,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "\"File is empty\"",
+            "flags": 2
+          }
+        ],
+        "redirects": []
+      }
+    },
+    "else_branch": {
+      "type": "simple",
+      "line": 13,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "\"File not readable\"",
+          "flags": 2
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "else_branch": {
+    "type": "simple",
+    "line": 16,
+    "words": [
+      {
+        "word": "echo"
+      },
+      {
+        "word": "\"Not a file\"",
+        "flags": 2
+      }
+    ],
+    "redirects": []
+  }
+}

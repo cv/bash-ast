@@ -1,0 +1,66 @@
+{
+  "type": "case",
+  "line": 1,
+  "word": "\"$1\"",
+  "clauses": [
+    {
+      "patterns": [
+        "start",
+        "begin"
+      ],
+      "action": {
+        "type": "simple",
+        "line": 3,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "\"Starting...\"",
+            "flags": 2
+          }
+        ],
+        "redirects": []
+      }
+    },
+    {
+      "patterns": [
+        "stop",
+        "end"
+      ],
+      "action": {
+        "type": "simple",
+        "line": 6,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "\"Stopping...\"",
+            "flags": 2
+          }
+        ],
+        "redirects": []
+      }
+    },
+    {
+      "patterns": [
+        "*"
+      ],
+      "action": {
+        "type": "simple",
+        "line": 9,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "\"Unknown: $1\"",
+            "flags": 3
+          }
+        ],
+        "redirects": []
+      }
+    }
+  ]
+}

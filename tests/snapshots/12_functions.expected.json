@@ -1,0 +1,48 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "function_def",
+    "name": "foo",
+    "body": {
+      "type": "group",
+      "line": 1,
+      "body": {
+        "type": "simple",
+        "line": 2,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "\"foo: $1\"",
+            "flags": 3
+          }
+        ],
+        "redirects": []
+      }
+    }
+  },
+  "right": {
+    "type": "function_def",
+    "name": "bar",
+    "body": {
+      "type": "group",
+      "line": 5,
+      "body": {
+        "type": "simple",
+        "line": 6,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "\"bar: $1\"",
+            "flags": 3
+          }
+        ],
+        "redirects": []
+      }
+    }
+  }
+}

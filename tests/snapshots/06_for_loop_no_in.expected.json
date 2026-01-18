@@ -1,0 +1,22 @@
+{
+  "type": "for",
+  "line": 1,
+  "variable": "arg",
+  "words": [
+    "\"$@\""
+  ],
+  "body": {
+    "type": "simple",
+    "line": 2,
+    "words": [
+      {
+        "word": "echo"
+      },
+      {
+        "word": "\"$arg\"",
+        "flags": 3
+      }
+    ],
+    "redirects": []
+  }
+}

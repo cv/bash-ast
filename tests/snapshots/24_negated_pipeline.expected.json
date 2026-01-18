@@ -1,0 +1,36 @@
+{
+  "type": "pipeline",
+  "commands": [
+    {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "cmd1"
+        }
+      ],
+      "redirects": []
+    },
+    {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "cmd2"
+        }
+      ],
+      "redirects": []
+    },
+    {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "cmd3"
+        }
+      ],
+      "redirects": []
+    }
+  ],
+  "negated": true
+}

@@ -1,0 +1,876 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "list",
+              "op": "semi",
+              "left": {
+                "type": "list",
+                "op": "semi",
+                "left": {
+                  "type": "list",
+                  "op": "semi",
+                  "left": {
+                    "type": "list",
+                    "op": "semi",
+                    "left": {
+                      "type": "list",
+                      "op": "semi",
+                      "left": {
+                        "type": "list",
+                        "op": "semi",
+                        "left": {
+                          "type": "list",
+                          "op": "semi",
+                          "left": {
+                            "type": "simple",
+                            "line": 2,
+                            "words": [
+                              {
+                                "word": "set"
+                              },
+                              {
+                                "word": "-euo"
+                              },
+                              {
+                                "word": "pipefail"
+                              }
+                            ],
+                            "redirects": []
+                          },
+                          "right": {
+                            "type": "simple",
+                            "line": 3,
+                            "words": [],
+                            "redirects": [],
+                            "assignments": [
+                              "IFS='\n\t'"
+                            ]
+                          }
+                        },
+                        "right": {
+                          "type": "simple",
+                          "line": 5,
+                          "words": [
+                            {
+                              "word": "readonly"
+                            }
+                          ],
+                          "redirects": [],
+                          "assignments": [
+                            "SCRIPT_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\""
+                          ]
+                        }
+                      },
+                      "right": {
+                        "type": "simple",
+                        "line": 6,
+                        "words": [
+                          {
+                            "word": "readonly"
+                          }
+                        ],
+                        "redirects": [],
+                        "assignments": [
+                          "LOG_FILE=\"${SCRIPT_DIR}/script.log\""
+                        ]
+                      }
+                    },
+                    "right": {
+                      "type": "simple",
+                      "line": 8,
+                      "words": [
+                        {
+                          "word": "declare"
+                        },
+                        {
+                          "word": "-A"
+                        },
+                        {
+                          "word": "CONFIG"
+                        }
+                      ],
+                      "redirects": []
+                    }
+                  },
+                  "right": {
+                    "type": "simple",
+                    "line": 9,
+                    "words": [],
+                    "redirects": [],
+                    "assignments": [
+                      "PROCESSED=()"
+                    ]
+                  }
+                },
+                "right": {
+                  "type": "function_def",
+                  "name": "log",
+                  "body": {
+                    "type": "group",
+                    "line": 11,
+                    "body": {
+                      "type": "list",
+                      "op": "semi",
+                      "left": {
+                        "type": "list",
+                        "op": "semi",
+                        "left": {
+                          "type": "simple",
+                          "line": 12,
+                          "words": [
+                            {
+                              "word": "local"
+                            }
+                          ],
+                          "redirects": [],
+                          "assignments": [
+                            "level=\"$1\""
+                          ]
+                        },
+                        "right": {
+                          "type": "simple",
+                          "line": 12,
+                          "words": [
+                            {
+                              "word": "shift"
+                            }
+                          ],
+                          "redirects": []
+                        }
+                      },
+                      "right": {
+                        "type": "pipeline",
+                        "commands": [
+                          {
+                            "type": "simple",
+                            "line": 13,
+                            "words": [
+                              {
+                                "word": "printf"
+                              },
+                              {
+                                "word": "'[%s] [%s] %s\\n'",
+                                "flags": 2
+                              },
+                              {
+                                "word": "\"$(date -Iseconds)\"",
+                                "flags": 3
+                              },
+                              {
+                                "word": "\"$level\"",
+                                "flags": 3
+                              },
+                              {
+                                "word": "\"$*\"",
+                                "flags": 3
+                              }
+                            ],
+                            "redirects": []
+                          },
+                          {
+                            "type": "simple",
+                            "line": 13,
+                            "words": [
+                              {
+                                "word": "tee"
+                              },
+                              {
+                                "word": "-a"
+                              },
+                              {
+                                "word": "\"$LOG_FILE\"",
+                                "flags": 3
+                              }
+                            ],
+                            "redirects": []
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "right": {
+                "type": "function_def",
+                "name": "cleanup",
+                "body": {
+                  "type": "group",
+                  "line": 16,
+                  "body": {
+                    "type": "list",
+                    "op": "semi",
+                    "left": {
+                      "type": "list",
+                      "op": "semi",
+                      "left": {
+                        "type": "list",
+                        "op": "semi",
+                        "left": {
+                          "type": "simple",
+                          "line": 17,
+                          "words": [
+                            {
+                              "word": "local"
+                            }
+                          ],
+                          "redirects": [],
+                          "assignments": [
+                            "exit_code=$?"
+                          ]
+                        },
+                        "right": {
+                          "type": "simple",
+                          "line": 18,
+                          "words": [
+                            {
+                              "word": "log"
+                            },
+                            {
+                              "word": "INFO"
+                            },
+                            {
+                              "word": "\"Cleaning up (exit code: $exit_code)\"",
+                              "flags": 3
+                            }
+                          ],
+                          "redirects": []
+                        }
+                      },
+                      "right": {
+                        "type": "simple",
+                        "line": 19,
+                        "words": [
+                          {
+                            "word": "rm"
+                          },
+                          {
+                            "word": "-f"
+                          },
+                          {
+                            "word": "\"${TMPFILES[@]:-}\"",
+                            "flags": 3
+                          }
+                        ],
+                        "redirects": []
+                      }
+                    },
+                    "right": {
+                      "type": "simple",
+                      "line": 20,
+                      "words": [
+                        {
+                          "word": "return"
+                        },
+                        {
+                          "word": "$exit_code",
+                          "flags": 1
+                        }
+                      ],
+                      "redirects": []
+                    }
+                  }
+                }
+              }
+            },
+            "right": {
+              "type": "simple",
+              "line": 23,
+              "words": [
+                {
+                  "word": "trap"
+                },
+                {
+                  "word": "cleanup"
+                },
+                {
+                  "word": "EXIT"
+                }
+              ],
+              "redirects": []
+            }
+          },
+          "right": {
+            "type": "simple",
+            "line": 24,
+            "words": [
+              {
+                "word": "trap"
+              },
+              {
+                "word": "'log ERROR \"Interrupted\"; exit 130'",
+                "flags": 2
+              },
+              {
+                "word": "INT"
+              },
+              {
+                "word": "TERM"
+              }
+            ],
+            "redirects": []
+          }
+        },
+        "right": {
+          "type": "function_def",
+          "name": "load_config",
+          "body": {
+            "type": "group",
+            "line": 26,
+            "body": {
+              "type": "list",
+              "op": "semi",
+              "left": {
+                "type": "list",
+                "op": "semi",
+                "left": {
+                  "type": "simple",
+                  "line": 27,
+                  "words": [
+                    {
+                      "word": "local"
+                    }
+                  ],
+                  "redirects": [],
+                  "assignments": [
+                    "config_file=\"${1:?Config file required}\""
+                  ]
+                },
+                "right": {
+                  "type": "list",
+                  "op": "or",
+                  "left": {
+                    "type": "conditional",
+                    "line": 28,
+                    "expr": {
+                      "cond_type": "unary",
+                      "op": "-f",
+                      "arg": "\"$config_file\""
+                    }
+                  },
+                  "right": {
+                    "type": "group",
+                    "body": {
+                      "type": "list",
+                      "op": "semi",
+                      "left": {
+                        "type": "simple",
+                        "line": 28,
+                        "words": [
+                          {
+                            "word": "log"
+                          },
+                          {
+                            "word": "ERROR"
+                          },
+                          {
+                            "word": "\"Config not found: $config_file\"",
+                            "flags": 3
+                          }
+                        ],
+                        "redirects": []
+                      },
+                      "right": {
+                        "type": "simple",
+                        "line": 28,
+                        "words": [
+                          {
+                            "word": "return"
+                          },
+                          {
+                            "word": "1"
+                          }
+                        ],
+                        "redirects": []
+                      }
+                    }
+                  }
+                }
+              },
+              "right": {
+                "type": "while",
+                "test": {
+                  "type": "simple",
+                  "line": 30,
+                  "words": [
+                    {
+                      "word": "read"
+                    },
+                    {
+                      "word": "-r"
+                    },
+                    {
+                      "word": "key"
+                    },
+                    {
+                      "word": "value"
+                    }
+                  ],
+                  "redirects": [],
+                  "assignments": [
+                    "IFS='='"
+                  ]
+                },
+                "body": {
+                  "type": "list",
+                  "op": "semi",
+                  "left": {
+                    "type": "list",
+                    "op": "semi",
+                    "left": {
+                      "type": "list",
+                      "op": "and",
+                      "left": {
+                        "type": "conditional",
+                        "line": 31,
+                        "expr": {
+                          "cond_type": "binary",
+                          "op": "=~",
+                          "left": "$key",
+                          "right": "^[[:space:]]*#"
+                        }
+                      },
+                      "right": {
+                        "type": "simple",
+                        "line": 31,
+                        "words": [
+                          {
+                            "word": "continue"
+                          }
+                        ],
+                        "redirects": []
+                      }
+                    },
+                    "right": {
+                      "type": "list",
+                      "op": "and",
+                      "left": {
+                        "type": "conditional",
+                        "line": 32,
+                        "expr": {
+                          "cond_type": "unary",
+                          "op": "-z",
+                          "arg": "\"$key\""
+                        }
+                      },
+                      "right": {
+                        "type": "simple",
+                        "line": 32,
+                        "words": [
+                          {
+                            "word": "continue"
+                          }
+                        ],
+                        "redirects": []
+                      }
+                    }
+                  },
+                  "right": {
+                    "type": "simple",
+                    "line": 33,
+                    "words": [],
+                    "redirects": [],
+                    "assignments": [
+                      "CONFIG[\"${key// /}\"]=\"${value//\\\"/}\""
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "right": {
+        "type": "function_def",
+        "name": "process_files",
+        "body": {
+          "type": "group",
+          "line": 37,
+          "body": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "list",
+              "op": "semi",
+              "left": {
+                "type": "simple",
+                "line": 38,
+                "words": [
+                  {
+                    "word": "local"
+                  },
+                  {
+                    "word": "file"
+                  }
+                ],
+                "redirects": []
+              },
+              "right": {
+                "type": "while",
+                "test": {
+                  "type": "simple",
+                  "line": 40,
+                  "words": [
+                    {
+                      "word": "read"
+                    },
+                    {
+                      "word": "-r"
+                    },
+                    {
+                      "word": "-d"
+                    },
+                    {
+                      "word": "''",
+                      "flags": 2
+                    },
+                    {
+                      "word": "file"
+                    }
+                  ],
+                  "redirects": [],
+                  "assignments": [
+                    "IFS="
+                  ]
+                },
+                "body": {
+                  "type": "if",
+                  "condition": {
+                    "type": "list",
+                    "op": "and",
+                    "left": {
+                      "type": "conditional",
+                      "line": 41,
+                      "expr": {
+                        "cond_type": "unary",
+                        "op": "-r",
+                        "arg": "\"$file\""
+                      }
+                    },
+                    "right": {
+                      "type": "arithmetic",
+                      "line": 41,
+                      "expression": " $(wc -l < \"$file\") > 0 "
+                    }
+                  },
+                  "then_branch": {
+                    "type": "list",
+                    "op": "semi",
+                    "left": {
+                      "type": "case",
+                      "line": 42,
+                      "word": "\"${file##*.}\"",
+                      "clauses": [
+                        {
+                          "patterns": [
+                            "txt"
+                          ],
+                          "action": {
+                            "type": "simple",
+                            "line": 43,
+                            "words": [
+                              {
+                                "word": "process_txt"
+                              },
+                              {
+                                "word": "\"$file\"",
+                                "flags": 3
+                              }
+                            ],
+                            "redirects": []
+                          }
+                        },
+                        {
+                          "patterns": [
+                            "log"
+                          ],
+                          "action": {
+                            "type": "simple",
+                            "line": 44,
+                            "words": [
+                              {
+                                "word": "process_log"
+                              },
+                              {
+                                "word": "\"$file\"",
+                                "flags": 3
+                              }
+                            ],
+                            "redirects": []
+                          }
+                        },
+                        {
+                          "patterns": [
+                            "*"
+                          ],
+                          "action": {
+                            "type": "simple",
+                            "line": 45,
+                            "words": [
+                              {
+                                "word": "log"
+                              },
+                              {
+                                "word": "WARN"
+                              },
+                              {
+                                "word": "\"Unknown type: $file\"",
+                                "flags": 3
+                              }
+                            ],
+                            "redirects": []
+                          }
+                        }
+                      ]
+                    },
+                    "right": {
+                      "type": "simple",
+                      "line": 47,
+                      "words": [],
+                      "redirects": [],
+                      "assignments": [
+                        "PROCESSED+=(\"$file\")"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "right": {
+              "type": "simple",
+              "line": 51,
+              "words": [
+                {
+                  "word": "log"
+                },
+                {
+                  "word": "INFO"
+                },
+                {
+                  "word": "\"Processed ${#PROCESSED[@]} files\"",
+                  "flags": 3
+                }
+              ],
+              "redirects": []
+            }
+          }
+        }
+      }
+    },
+    "right": {
+      "type": "function_def",
+      "name": "main",
+      "body": {
+        "type": "group",
+        "line": 54,
+        "body": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "list",
+              "op": "semi",
+              "left": {
+                "type": "simple",
+                "line": 55,
+                "words": [
+                  {
+                    "word": "log"
+                  },
+                  {
+                    "word": "INFO"
+                  },
+                  {
+                    "word": "\"Starting script with args: $*\"",
+                    "flags": 3
+                  }
+                ],
+                "redirects": []
+              },
+              "right": {
+                "type": "list",
+                "op": "or",
+                "left": {
+                  "type": "simple",
+                  "line": 57,
+                  "words": [
+                    {
+                      "word": "load_config"
+                    },
+                    {
+                      "word": "\"${CONFIG_FILE:-config.ini}\"",
+                      "flags": 3
+                    }
+                  ],
+                  "redirects": []
+                },
+                "right": {
+                  "type": "simple",
+                  "line": 57,
+                  "words": [
+                    {
+                      "word": "exit"
+                    },
+                    {
+                      "word": "1"
+                    }
+                  ],
+                  "redirects": []
+                }
+              }
+            },
+            "right": {
+              "type": "for",
+              "line": 59,
+              "variable": "dir",
+              "words": [
+                "\"${@:-$PWD}\""
+              ],
+              "body": {
+                "type": "list",
+                "op": "and",
+                "left": {
+                  "type": "conditional",
+                  "line": 60,
+                  "expr": {
+                    "cond_type": "unary",
+                    "op": "-d",
+                    "arg": "\"$dir\""
+                  }
+                },
+                "right": {
+                  "type": "simple",
+                  "line": 60,
+                  "words": [
+                    {
+                      "word": "process_files"
+                    },
+                    {
+                      "word": "\"$dir\"",
+                      "flags": 3
+                    }
+                  ],
+                  "redirects": []
+                }
+              }
+            }
+          },
+          "right": {
+            "type": "pipeline",
+            "commands": [
+              {
+                "type": "group",
+                "body": {
+                  "type": "list",
+                  "op": "semi",
+                  "left": {
+                    "type": "list",
+                    "op": "semi",
+                    "left": {
+                      "type": "simple",
+                      "line": 64,
+                      "words": [
+                        {
+                          "word": "echo"
+                        },
+                        {
+                          "word": "\"Summary\"",
+                          "flags": 2
+                        }
+                      ],
+                      "redirects": []
+                    },
+                    "right": {
+                      "type": "simple",
+                      "line": 65,
+                      "words": [
+                        {
+                          "word": "echo"
+                        },
+                        {
+                          "word": "\"=======\"",
+                          "flags": 2
+                        }
+                      ],
+                      "redirects": []
+                    }
+                  },
+                  "right": {
+                    "type": "simple",
+                    "line": 66,
+                    "words": [
+                      {
+                        "word": "printf"
+                      },
+                      {
+                        "word": "'%s\\n'",
+                        "flags": 2
+                      },
+                      {
+                        "word": "\"${PROCESSED[@]}\"",
+                        "flags": 3
+                      }
+                    ],
+                    "redirects": []
+                  }
+                }
+              },
+              {
+                "type": "simple",
+                "line": 67,
+                "words": [
+                  {
+                    "word": "mail"
+                  },
+                  {
+                    "word": "-s"
+                  },
+                  {
+                    "word": "\"Processing complete\"",
+                    "flags": 2
+                  },
+                  {
+                    "word": "\"${CONFIG[email]:-admin@localhost}\"",
+                    "flags": 3
+                  }
+                ],
+                "redirects": []
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 70,
+    "words": [
+      {
+        "word": "main"
+      },
+      {
+        "word": "\"$@\"",
+        "flags": 3
+      }
+    ],
+    "redirects": []
+  }
+}

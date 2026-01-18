@@ -1,0 +1,213 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "group",
+      "body": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "simple",
+              "line": 2,
+              "words": [
+                {
+                  "word": "echo"
+                },
+                {
+                  "word": "\"Starting batch\"",
+                  "flags": 2
+                }
+              ],
+              "redirects": []
+            },
+            "right": {
+              "type": "simple",
+              "line": 3,
+              "words": [
+                {
+                  "word": "cmd1"
+                }
+              ],
+              "redirects": []
+            }
+          },
+          "right": {
+            "type": "simple",
+            "line": 4,
+            "words": [
+              {
+                "word": "cmd2"
+              }
+            ],
+            "redirects": []
+          }
+        },
+        "right": {
+          "type": "simple",
+          "line": 5,
+          "words": [
+            {
+              "word": "echo"
+            },
+            {
+              "word": "\"Finished batch\"",
+              "flags": 2
+            }
+          ],
+          "redirects": []
+        }
+      }
+    },
+    "right": {
+      "type": "group",
+      "body": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "simple",
+          "line": 8,
+          "words": [
+            {
+              "word": "read"
+            },
+            {
+              "word": "-r"
+            },
+            {
+              "word": "header"
+            }
+          ],
+          "redirects": []
+        },
+        "right": {
+          "type": "simple",
+          "line": 8,
+          "words": [
+            {
+              "word": "cat"
+            }
+          ],
+          "redirects": []
+        }
+      }
+    }
+  },
+  "right": {
+    "type": "pipeline",
+    "commands": [
+      {
+        "type": "group",
+        "body": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "simple",
+              "line": 11,
+              "words": [
+                {
+                  "word": "echo"
+                },
+                {
+                  "word": "\"User: $USER\"",
+                  "flags": 3
+                }
+              ],
+              "redirects": []
+            },
+            "right": {
+              "type": "simple",
+              "line": 12,
+              "words": [
+                {
+                  "word": "echo"
+                },
+                {
+                  "word": "\"Date: $(date)\"",
+                  "flags": 3
+                }
+              ],
+              "redirects": []
+            }
+          },
+          "right": {
+            "type": "pipeline",
+            "commands": [
+              {
+                "type": "simple",
+                "line": 13,
+                "words": [
+                  {
+                    "word": "env"
+                  }
+                ],
+                "redirects": []
+              },
+              {
+                "type": "simple",
+                "line": 13,
+                "words": [
+                  {
+                    "word": "sort"
+                  }
+                ],
+                "redirects": []
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "group",
+        "body": {
+          "type": "while",
+          "test": {
+            "type": "simple",
+            "line": 15,
+            "words": [
+              {
+                "word": "read"
+              },
+              {
+                "word": "-r"
+              },
+              {
+                "word": "line"
+              }
+            ],
+            "redirects": []
+          },
+          "body": {
+            "type": "simple",
+            "line": 16,
+            "words": [
+              {
+                "word": "printf"
+              },
+              {
+                "word": "\"[LOG] %s\\n\"",
+                "flags": 2
+              },
+              {
+                "word": "\"$line\"",
+                "flags": 3
+              }
+            ],
+            "redirects": []
+          }
+        }
+      }
+    ]
+  }
+}

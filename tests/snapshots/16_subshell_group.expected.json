@@ -1,0 +1,31 @@
+{
+  "type": "subshell",
+  "line": 1,
+  "body": {
+    "type": "list",
+    "op": "and",
+    "left": {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "cd"
+        },
+        {
+          "word": "/tmp"
+        }
+      ],
+      "redirects": []
+    },
+    "right": {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "ls"
+        }
+      ],
+      "redirects": []
+    }
+  }
+}

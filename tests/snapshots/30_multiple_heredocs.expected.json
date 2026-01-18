@@ -1,0 +1,64 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "cat"
+        }
+      ],
+      "redirects": [
+        {
+          "direction": "here_doc",
+          "source_fd": 0,
+          "target": "#!/bin/bash\necho \"Hello\"\n",
+          "here_doc_eof": "SCRIPT"
+        },
+        {
+          "direction": "output",
+          "source_fd": 1,
+          "target": "script.sh"
+        }
+      ]
+    },
+    "right": {
+      "type": "simple",
+      "line": 6,
+      "words": [
+        {
+          "word": "cat"
+        }
+      ],
+      "redirects": [
+        {
+          "direction": "here_doc",
+          "source_fd": 0,
+          "target": "This heredoc\nuses tabs for\nindentation\n",
+          "here_doc_eof": "INDENTED"
+        }
+      ]
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 12,
+    "words": [
+      {
+        "word": "mysql"
+      }
+    ],
+    "redirects": [
+      {
+        "direction": "here_doc",
+        "source_fd": 0,
+        "target": "SELECT * FROM users\nWHERE active = 1;\n",
+        "here_doc_eof": "SQL"
+      }
+    ]
+  }
+}

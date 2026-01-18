@@ -1,0 +1,117 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "for",
+        "line": 1,
+        "variable": "server",
+        "words": [
+          "web{01..05}.example.com"
+        ],
+        "body": {
+          "type": "list",
+          "op": "amp",
+          "left": {
+            "type": "simple",
+            "line": 2,
+            "words": [
+              {
+                "word": "ssh"
+              },
+              {
+                "word": "\"$server\"",
+                "flags": 3
+              },
+              {
+                "word": "'uptime'",
+                "flags": 2
+              }
+            ],
+            "redirects": []
+          },
+          "right": {
+            "type": "simple",
+            "words": [],
+            "redirects": []
+          }
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 4,
+        "words": [
+          {
+            "word": "wait"
+          }
+        ],
+        "redirects": []
+      }
+    },
+    "right": {
+      "type": "for",
+      "line": 6,
+      "variable": "ext",
+      "words": [
+        "{jpg,png,gif}"
+      ],
+      "body": {
+        "type": "simple",
+        "line": 7,
+        "words": [
+          {
+            "word": "find"
+          },
+          {
+            "word": "."
+          },
+          {
+            "word": "-name"
+          },
+          {
+            "word": "\"*.$ext\"",
+            "flags": 3
+          },
+          {
+            "word": "-exec"
+          },
+          {
+            "word": "convert"
+          },
+          {
+            "word": "{}"
+          },
+          {
+            "word": "{}.webp"
+          },
+          {
+            "word": "\\;",
+            "flags": 2
+          }
+        ],
+        "redirects": []
+      }
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 10,
+    "words": [
+      {
+        "word": "mkdir"
+      },
+      {
+        "word": "-p"
+      },
+      {
+        "word": "project/{src,lib,test}/{main,util}"
+      }
+    ],
+    "redirects": []
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "type": "arithmetic_for",
+  "line": 1,
+  "init": "i=0",
+  "test": "i<10",
+  "step": "i++",
+  "body": {
+    "type": "simple",
+    "line": 2,
+    "words": [
+      {
+        "word": "echo"
+      },
+      {
+        "word": "$i",
+        "flags": 1
+      }
+    ],
+    "redirects": []
+  }
+}

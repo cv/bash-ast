@@ -1,0 +1,90 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "long_command"
+        },
+        {
+          "word": "--option1=value1"
+        },
+        {
+          "word": "--option2=value2"
+        },
+        {
+          "word": "--flag"
+        },
+        {
+          "word": "arg1"
+        },
+        {
+          "word": "arg2"
+        },
+        {
+          "word": "arg3"
+        }
+      ],
+      "redirects": []
+    },
+    "right": {
+      "type": "simple",
+      "line": 9,
+      "words": [],
+      "redirects": [],
+      "assignments": [
+        "result=$(echo \"hello\" | tr 'a-z' 'A-Z' | sed 's/HELLO/WORLD/')"
+      ]
+    }
+  },
+  "right": {
+    "type": "list",
+    "op": "and",
+    "left": {
+      "type": "conditional",
+      "line": 13,
+      "expr": {
+        "cond_type": "or",
+        "left": {
+          "cond_type": "and",
+          "left": {
+            "cond_type": "binary",
+            "op": "==",
+            "left": "$var",
+            "right": "\"value\""
+          },
+          "right": {
+            "cond_type": "binary",
+            "op": "==",
+            "left": "$other",
+            "right": "\"test\""
+          }
+        },
+        "right": {
+          "cond_type": "unary",
+          "op": "-f",
+          "arg": "$file"
+        }
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 13,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "\"match\"",
+          "flags": 2
+        }
+      ],
+      "redirects": []
+    }
+  }
+}

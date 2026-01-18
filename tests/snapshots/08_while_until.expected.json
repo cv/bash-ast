@@ -1,0 +1,66 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "while",
+    "test": {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "read"
+        },
+        {
+          "word": "line"
+        }
+      ],
+      "redirects": []
+    },
+    "body": {
+      "type": "simple",
+      "line": 2,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "\"$line\"",
+          "flags": 3
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "right": {
+    "type": "until",
+    "test": {
+      "type": "simple",
+      "line": 5,
+      "words": [
+        {
+          "word": "test"
+        },
+        {
+          "word": "-f"
+        },
+        {
+          "word": "/tmp/done"
+        }
+      ],
+      "redirects": []
+    },
+    "body": {
+      "type": "simple",
+      "line": 6,
+      "words": [
+        {
+          "word": "sleep"
+        },
+        {
+          "word": "1"
+        }
+      ],
+      "redirects": []
+    }
+  }
+}

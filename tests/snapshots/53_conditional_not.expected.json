@@ -1,0 +1,36 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "conditional",
+      "line": 1,
+      "expr": {
+        "cond_type": "unary",
+        "op": "-n",
+        "arg": "$a"
+      }
+    },
+    "right": {
+      "type": "conditional",
+      "line": 2,
+      "expr": {
+        "cond_type": "unary",
+        "op": "-f",
+        "arg": "/tmp/file"
+      }
+    }
+  },
+  "right": {
+    "type": "conditional",
+    "line": 3,
+    "expr": {
+      "cond_type": "binary",
+      "op": "==",
+      "left": "$a",
+      "right": "$b"
+    }
+  }
+}

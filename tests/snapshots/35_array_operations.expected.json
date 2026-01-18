@@ -1,0 +1,169 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "simple",
+          "line": 1,
+          "words": [],
+          "redirects": [],
+          "assignments": [
+            "files=()"
+          ]
+        },
+        "right": {
+          "type": "simple",
+          "line": 2,
+          "words": [
+            {
+              "word": "declare"
+            },
+            {
+              "word": "-A"
+            },
+            {
+              "word": "counts"
+            }
+          ],
+          "redirects": []
+        }
+      },
+      "right": {
+        "type": "while",
+        "test": {
+          "type": "simple",
+          "line": 4,
+          "words": [
+            {
+              "word": "read"
+            },
+            {
+              "word": "-r"
+            },
+            {
+              "word": "-d"
+            },
+            {
+              "word": "''",
+              "flags": 2
+            },
+            {
+              "word": "file"
+            }
+          ],
+          "redirects": [],
+          "assignments": [
+            "IFS="
+          ]
+        },
+        "body": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "simple",
+              "line": 5,
+              "words": [],
+              "redirects": [],
+              "assignments": [
+                "files+=(\"$file\")"
+              ]
+            },
+            "right": {
+              "type": "simple",
+              "line": 6,
+              "words": [],
+              "redirects": [],
+              "assignments": [
+                "ext=\"${file##*.}\""
+              ]
+            }
+          },
+          "right": {
+            "type": "arithmetic",
+            "line": 7,
+            "expression": " counts[$ext]++ "
+          }
+        }
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 10,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "\"Total: ${#files[@]}\"",
+          "flags": 3
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "right": {
+    "type": "pipeline",
+    "commands": [
+      {
+        "type": "for",
+        "line": 11,
+        "variable": "ext",
+        "words": [
+          "\"${!counts[@]}\""
+        ],
+        "body": {
+          "type": "simple",
+          "line": 12,
+          "words": [
+            {
+              "word": "printf"
+            },
+            {
+              "word": "\"%s: %d\\n\"",
+              "flags": 2
+            },
+            {
+              "word": "\"$ext\"",
+              "flags": 3
+            },
+            {
+              "word": "\"${counts[$ext]}\"",
+              "flags": 3
+            }
+          ],
+          "redirects": []
+        }
+      },
+      {
+        "type": "simple",
+        "line": 13,
+        "words": [
+          {
+            "word": "sort"
+          },
+          {
+            "word": "-t:"
+          },
+          {
+            "word": "-k2"
+          },
+          {
+            "word": "-rn"
+          }
+        ],
+        "redirects": []
+      }
+    ]
+  }
+}

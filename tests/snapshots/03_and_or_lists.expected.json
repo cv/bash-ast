@@ -1,0 +1,38 @@
+{
+  "type": "list",
+  "op": "or",
+  "left": {
+    "type": "list",
+    "op": "and",
+    "left": {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "cmd1"
+        }
+      ],
+      "redirects": []
+    },
+    "right": {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "cmd2"
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 1,
+    "words": [
+      {
+        "word": "cmd3"
+      }
+    ],
+    "redirects": []
+  }
+}

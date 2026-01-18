@@ -1,0 +1,92 @@
+{
+  "type": "pipeline",
+  "commands": [
+    {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "cat"
+        },
+        {
+          "word": "input.txt"
+        }
+      ],
+      "redirects": [
+        {
+          "direction": "output",
+          "source_fd": 2,
+          "target": "/dev/null"
+        }
+      ]
+    },
+    {
+      "type": "simple",
+      "line": 2,
+      "words": [
+        {
+          "word": "grep"
+        },
+        {
+          "word": "-v"
+        },
+        {
+          "word": "'^#'",
+          "flags": 2
+        }
+      ],
+      "redirects": []
+    },
+    {
+      "type": "simple",
+      "line": 3,
+      "words": [
+        {
+          "word": "sort"
+        },
+        {
+          "word": "-u"
+        }
+      ],
+      "redirects": []
+    },
+    {
+      "type": "simple",
+      "line": 4,
+      "words": [
+        {
+          "word": "tee"
+        },
+        {
+          "word": "intermediate.txt"
+        }
+      ],
+      "redirects": []
+    },
+    {
+      "type": "simple",
+      "line": 5,
+      "words": [
+        {
+          "word": "awk"
+        },
+        {
+          "word": "'{print NR\": \"$0}'",
+          "flags": 2
+        }
+      ],
+      "redirects": [
+        {
+          "direction": "output",
+          "source_fd": 1,
+          "target": "output.txt"
+        },
+        {
+          "direction": "dup_output",
+          "source_fd": 2,
+          "target": 1
+        }
+      ]
+    }
+  ]
+}

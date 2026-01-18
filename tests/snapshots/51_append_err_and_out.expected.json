@@ -1,0 +1,16 @@
+{
+  "type": "simple",
+  "line": 1,
+  "words": [
+    {
+      "word": "cmd"
+    }
+  ],
+  "redirects": [
+    {
+      "direction": "append_err_and_out",
+      "source_fd": 1,
+      "target": "combined.log"
+    }
+  ]
+}

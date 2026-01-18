@@ -1,0 +1,198 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "function_def",
+          "name": "outer",
+          "body": {
+            "type": "group",
+            "line": 4,
+            "body": {
+              "type": "list",
+              "op": "semi",
+              "left": {
+                "type": "list",
+                "op": "semi",
+                "left": {
+                  "type": "list",
+                  "op": "semi",
+                  "left": {
+                    "type": "simple",
+                    "line": 2,
+                    "words": [
+                      {
+                        "word": "local"
+                      }
+                    ],
+                    "redirects": [],
+                    "assignments": [
+                      "x=1"
+                    ]
+                  },
+                  "right": {
+                    "type": "function_def",
+                    "name": "inner",
+                    "body": {
+                      "type": "group",
+                      "line": 4,
+                      "body": {
+                        "type": "list",
+                        "op": "semi",
+                        "left": {
+                          "type": "simple",
+                          "line": 5,
+                          "words": [
+                            {
+                              "word": "local"
+                            }
+                          ],
+                          "redirects": [],
+                          "assignments": [
+                            "y=2"
+                          ]
+                        },
+                        "right": {
+                          "type": "simple",
+                          "line": 6,
+                          "words": [
+                            {
+                              "word": "echo"
+                            },
+                            {
+                              "word": "\"inner: x=$x y=$y\"",
+                              "flags": 3
+                            }
+                          ],
+                          "redirects": []
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": {
+                  "type": "simple",
+                  "line": 9,
+                  "words": [
+                    {
+                      "word": "inner"
+                    }
+                  ],
+                  "redirects": []
+                }
+              },
+              "right": {
+                "type": "simple",
+                "line": 10,
+                "words": [
+                  {
+                    "word": "echo"
+                  },
+                  {
+                    "word": "\"outer: x=$x\"",
+                    "flags": 3
+                  }
+                ],
+                "redirects": []
+              }
+            }
+          }
+        },
+        "right": {
+          "type": "function_def",
+          "name": "make_counter",
+          "body": {
+            "type": "group",
+            "line": 15,
+            "body": {
+              "type": "list",
+              "op": "semi",
+              "left": {
+                "type": "simple",
+                "line": 14,
+                "words": [
+                  {
+                    "word": "local"
+                  }
+                ],
+                "redirects": [],
+                "assignments": [
+                  "count=0"
+                ]
+              },
+              "right": {
+                "type": "function_def",
+                "name": "increment",
+                "body": {
+                  "type": "group",
+                  "line": 15,
+                  "body": {
+                    "type": "list",
+                    "op": "semi",
+                    "left": {
+                      "type": "arithmetic",
+                      "line": 16,
+                      "expression": " count++ "
+                    },
+                    "right": {
+                      "type": "simple",
+                      "line": 17,
+                      "words": [
+                        {
+                          "word": "echo"
+                        },
+                        {
+                          "word": "$count",
+                          "flags": 1
+                        }
+                      ],
+                      "redirects": []
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 21,
+        "words": [
+          {
+            "word": "outer"
+          }
+        ],
+        "redirects": []
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 22,
+      "words": [
+        {
+          "word": "make_counter"
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 23,
+    "words": [
+      {
+        "word": "increment"
+      }
+    ],
+    "redirects": []
+  }
+}

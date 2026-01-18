@@ -1,0 +1,24 @@
+{
+  "type": "for",
+  "line": 1,
+  "variable": "i",
+  "words": [
+    "a",
+    "b",
+    "c"
+  ],
+  "body": {
+    "type": "simple",
+    "line": 2,
+    "words": [
+      {
+        "word": "echo"
+      },
+      {
+        "word": "\"$i\"",
+        "flags": 3
+      }
+    ],
+    "redirects": []
+  }
+}

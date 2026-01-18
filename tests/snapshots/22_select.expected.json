@@ -1,0 +1,38 @@
+{
+  "type": "select",
+  "line": 1,
+  "variable": "opt",
+  "words": [
+    "a",
+    "b",
+    "c"
+  ],
+  "body": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "\"$opt\"",
+          "flags": 3
+        }
+      ],
+      "redirects": []
+    },
+    "right": {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "break"
+        }
+      ],
+      "redirects": []
+    }
+  }
+}

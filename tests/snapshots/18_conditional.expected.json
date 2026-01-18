@@ -1,0 +1,65 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "conditional",
+        "line": 1,
+        "expr": {
+          "cond_type": "unary",
+          "op": "-f",
+          "arg": "/etc/passwd"
+        }
+      },
+      "right": {
+        "type": "conditional",
+        "line": 2,
+        "expr": {
+          "cond_type": "binary",
+          "op": "==",
+          "left": "$a",
+          "right": "$b"
+        }
+      }
+    },
+    "right": {
+      "type": "conditional",
+      "line": 3,
+      "expr": {
+        "cond_type": "and",
+        "left": {
+          "cond_type": "unary",
+          "op": "-f",
+          "arg": "file"
+        },
+        "right": {
+          "cond_type": "unary",
+          "op": "-r",
+          "arg": "file"
+        }
+      }
+    }
+  },
+  "right": {
+    "type": "conditional",
+    "line": 4,
+    "expr": {
+      "cond_type": "or",
+      "left": {
+        "cond_type": "unary",
+        "op": "-d",
+        "arg": "dir"
+      },
+      "right": {
+        "cond_type": "unary",
+        "op": "-L",
+        "arg": "dir"
+      }
+    }
+  }
+}

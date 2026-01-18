@@ -1,0 +1,50 @@
+{
+  "type": "for",
+  "line": 1,
+  "variable": "i",
+  "words": [
+    "1",
+    "2",
+    "3"
+  ],
+  "body": {
+    "type": "for",
+    "line": 2,
+    "variable": "j",
+    "words": [
+      "a",
+      "b",
+      "c"
+    ],
+    "body": {
+      "type": "while",
+      "test": {
+        "type": "simple",
+        "line": 3,
+        "words": [
+          {
+            "word": "read"
+          },
+          {
+            "word": "line"
+          }
+        ],
+        "redirects": []
+      },
+      "body": {
+        "type": "simple",
+        "line": 4,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "\"$i $j: $line\"",
+            "flags": 3
+          }
+        ],
+        "redirects": []
+      }
+    }
+  }
+}

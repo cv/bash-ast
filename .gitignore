@@ -1,0 +1,50 @@
+# Rust build artifacts
+/target/
+Cargo.lock
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Core dumps and profiling data
+*.core
+*.profraw
+*.profdata
+
+# Build artifacts from bash
+bash/*.o
+bash/*.a
+bash/config.h
+bash/config.status
+bash/config.cache
+bash/config.log
+bash/Makefile
+bash/pathnames.h
+bash/buildconf.h
+bash/signames.h
+bash/syntax.c
+bash/version.h
+bash/builtins/Makefile
+bash/builtins/*.o
+bash/builtins/*.a
+bash/lib/*/Makefile
+bash/lib/*/*.o
+bash/lib/*/*.a
+bash/bash
+bash/bashbug
+bash/mksyntax
+bash/mksignames
+bash/bashversion
+bash/stamp-*
+
+# Fuzz test generated files
+fuzz/artifacts/
+fuzz/corpus/fuzz_parse/*.cur
+fuzz/corpus/fuzz_parse/[0-9a-f]*

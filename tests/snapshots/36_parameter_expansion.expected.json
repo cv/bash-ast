@@ -1,0 +1,261 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "list",
+              "op": "semi",
+              "left": {
+                "type": "list",
+                "op": "semi",
+                "left": {
+                  "type": "list",
+                  "op": "semi",
+                  "left": {
+                    "type": "list",
+                    "op": "semi",
+                    "left": {
+                      "type": "list",
+                      "op": "semi",
+                      "left": {
+                        "type": "list",
+                        "op": "semi",
+                        "left": {
+                          "type": "list",
+                          "op": "semi",
+                          "left": {
+                            "type": "list",
+                            "op": "semi",
+                            "left": {
+                              "type": "simple",
+                              "line": 1,
+                              "words": [],
+                              "redirects": [],
+                              "assignments": [
+                                "file=\"/path/to/some/file.tar.gz\""
+                              ]
+                            },
+                            "right": {
+                              "type": "simple",
+                              "line": 3,
+                              "words": [
+                                {
+                                  "word": "echo"
+                                },
+                                {
+                                  "word": "\"${file##*/}\"",
+                                  "flags": 3
+                                }
+                              ],
+                              "redirects": []
+                            }
+                          },
+                          "right": {
+                            "type": "simple",
+                            "line": 4,
+                            "words": [
+                              {
+                                "word": "echo"
+                              },
+                              {
+                                "word": "\"${file%.*}\"",
+                                "flags": 3
+                              }
+                            ],
+                            "redirects": []
+                          }
+                        },
+                        "right": {
+                          "type": "simple",
+                          "line": 5,
+                          "words": [
+                            {
+                              "word": "echo"
+                            },
+                            {
+                              "word": "\"${file%%.*}\"",
+                              "flags": 3
+                            }
+                          ],
+                          "redirects": []
+                        }
+                      },
+                      "right": {
+                        "type": "simple",
+                        "line": 6,
+                        "words": [
+                          {
+                            "word": "echo"
+                          },
+                          {
+                            "word": "\"${file#*/}\"",
+                            "flags": 3
+                          }
+                        ],
+                        "redirects": []
+                      }
+                    },
+                    "right": {
+                      "type": "simple",
+                      "line": 7,
+                      "words": [
+                        {
+                          "word": "echo"
+                        },
+                        {
+                          "word": "\"${file/path/new}\"",
+                          "flags": 3
+                        }
+                      ],
+                      "redirects": []
+                    }
+                  },
+                  "right": {
+                    "type": "simple",
+                    "line": 8,
+                    "words": [
+                      {
+                        "word": "echo"
+                      },
+                      {
+                        "word": "\"${file//\\//\\\\}\"",
+                        "flags": 3
+                      }
+                    ],
+                    "redirects": []
+                  }
+                },
+                "right": {
+                  "type": "simple",
+                  "line": 9,
+                  "words": [
+                    {
+                      "word": "echo"
+                    },
+                    {
+                      "word": "\"${file:5:10}\"",
+                      "flags": 3
+                    }
+                  ],
+                  "redirects": []
+                }
+              },
+              "right": {
+                "type": "simple",
+                "line": 10,
+                "words": [
+                  {
+                    "word": "echo"
+                  },
+                  {
+                    "word": "\"${file:-default}\"",
+                    "flags": 3
+                  }
+                ],
+                "redirects": []
+              }
+            },
+            "right": {
+              "type": "simple",
+              "line": 11,
+              "words": [
+                {
+                  "word": "echo"
+                },
+                {
+                  "word": "\"${file:+is set}\"",
+                  "flags": 3
+                }
+              ],
+              "redirects": []
+            }
+          },
+          "right": {
+            "type": "simple",
+            "line": 12,
+            "words": [
+              {
+                "word": "echo"
+              },
+              {
+                "word": "\"${file:?error if unset}\"",
+                "flags": 3
+              }
+            ],
+            "redirects": []
+          }
+        },
+        "right": {
+          "type": "simple",
+          "line": 13,
+          "words": [
+            {
+              "word": "echo"
+            },
+            {
+              "word": "\"${#file}\"",
+              "flags": 3
+            }
+          ],
+          "redirects": []
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 14,
+        "words": [
+          {
+            "word": "echo"
+          },
+          {
+            "word": "\"${file^^}\"",
+            "flags": 3
+          }
+        ],
+        "redirects": []
+      }
+    },
+    "right": {
+      "type": "simple",
+      "line": 15,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "\"${file,,}\"",
+          "flags": 3
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 16,
+    "words": [
+      {
+        "word": "echo"
+      },
+      {
+        "word": "\"${file~}\"",
+        "flags": 3
+      }
+    ],
+    "redirects": []
+  }
+}

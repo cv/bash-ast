@@ -1,0 +1,8 @@
+# Cargo configuration for bash-ast
+#
+# bash-ast uses FFI to bash's parser which relies on global state.
+# Tests MUST run single-threaded to avoid race conditions.
+
+[env]
+# Force single-threaded test execution
+RUST_TEST_THREADS = "1"

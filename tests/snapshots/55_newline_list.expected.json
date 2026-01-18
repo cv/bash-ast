@@ -1,0 +1,47 @@
+{
+  "type": "list",
+  "op": "semi",
+  "left": {
+    "type": "list",
+    "op": "semi",
+    "left": {
+      "type": "simple",
+      "line": 1,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "first"
+        }
+      ],
+      "redirects": []
+    },
+    "right": {
+      "type": "simple",
+      "line": 2,
+      "words": [
+        {
+          "word": "echo"
+        },
+        {
+          "word": "second"
+        }
+      ],
+      "redirects": []
+    }
+  },
+  "right": {
+    "type": "simple",
+    "line": 3,
+    "words": [
+      {
+        "word": "echo"
+      },
+      {
+        "word": "third"
+      }
+    ],
+    "redirects": []
+  }
+}

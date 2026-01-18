@@ -1,0 +1,125 @@
+{
+  "type": "function_def",
+  "name": "process_file",
+  "body": {
+    "type": "group",
+    "line": 1,
+    "body": {
+      "type": "list",
+      "op": "semi",
+      "left": {
+        "type": "list",
+        "op": "semi",
+        "left": {
+          "type": "list",
+          "op": "semi",
+          "left": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "simple",
+              "line": 2,
+              "words": [
+                {
+                  "word": "local"
+                }
+              ],
+              "redirects": [],
+              "assignments": [
+                "file=\"$1\""
+              ]
+            },
+            "right": {
+              "type": "simple",
+              "line": 3,
+              "words": [
+                {
+                  "word": "local"
+                },
+                {
+                  "word": "-i"
+                }
+              ],
+              "redirects": [],
+              "assignments": [
+                "count=0"
+              ]
+            }
+          },
+          "right": {
+            "type": "simple",
+            "line": 4,
+            "words": [
+              {
+                "word": "local"
+              },
+              {
+                "word": "line"
+              }
+            ],
+            "redirects": []
+          }
+        },
+        "right": {
+          "type": "while",
+          "test": {
+            "type": "simple",
+            "line": 5,
+            "words": [
+              {
+                "word": "read"
+              },
+              {
+                "word": "-r"
+              },
+              {
+                "word": "line"
+              }
+            ],
+            "redirects": [],
+            "assignments": [
+              "IFS="
+            ]
+          },
+          "body": {
+            "type": "list",
+            "op": "semi",
+            "left": {
+              "type": "arithmetic",
+              "line": 6,
+              "expression": " count++ "
+            },
+            "right": {
+              "type": "simple",
+              "line": 7,
+              "words": [
+                {
+                  "word": "echo"
+                },
+                {
+                  "word": "\"[$count] $line\"",
+                  "flags": 3
+                }
+              ],
+              "redirects": []
+            }
+          }
+        }
+      },
+      "right": {
+        "type": "simple",
+        "line": 9,
+        "words": [
+          {
+            "word": "return"
+          },
+          {
+            "word": "$count",
+            "flags": 1
+          }
+        ],
+        "redirects": []
+      }
+    }
+  }
+}

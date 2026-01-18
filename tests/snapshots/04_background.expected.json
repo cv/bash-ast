@@ -1,0 +1,24 @@
+{
+  "type": "list",
+  "op": "amp",
+  "left": {
+    "type": "simple",
+    "line": 1,
+    "words": [
+      {
+        "word": "long_running_cmd"
+      }
+    ],
+    "redirects": []
+  },
+  "right": {
+    "type": "simple",
+    "line": 2,
+    "words": [
+      {
+        "word": "wait"
+      }
+    ],
+    "redirects": []
+  }
+}
