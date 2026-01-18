@@ -82,3 +82,55 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+  homebrew:
+    name: Update Homebrew Formula
+    needs: release
+    runs-on: ubuntu-latest
+    # Skip for prereleases
+    if: ${{ !contains(github.ref_name, '-') }}
+
+    steps:
+      - name: Checkout bash-ast
+        uses: actions/checkout@v4
+
+      - name: Get release info
+        id: release_info
+        run: |
+          # Get the tag name (e.g., v0.1.0)
+          TAG="${{ github.ref_name }}"
+          # Get the full commit SHA for this tag
+          REVISION="${{ github.sha }}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "revision=${REVISION}" >> $GITHUB_OUTPUT
+
+      - name: Generate updated formula
+        run: |
+          # Update the formula with the new version and revision
+          sed -i \
+            -e 's/VERSION_PLACEHOLDER/${{ steps.release_info.outputs.tag }}/' \
+            -e 's/REVISION_PLACEHOLDER/${{ steps.release_info.outputs.revision }}/' \
+            Formula/bash-ast.rb
+          
+          echo "Updated formula:"
+          cat Formula/bash-ast.rb
+
+      - name: Checkout homebrew-taps
+        uses: actions/checkout@v4
+        with:
+          repository: cv/homebrew-taps
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-taps
+
+      - name: Update formula in tap
+        run: |
+          mkdir -p homebrew-taps/Formula
+          cp Formula/bash-ast.rb homebrew-taps/Formula/
+          
+          cd homebrew-taps
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add Formula/bash-ast.rb
+          git diff --staged --quiet || git commit -m "bash-ast ${{ steps.release_info.outputs.tag }}"
+          git push

@@ -29,7 +29,20 @@ Parse bash scripts to JSON AST using GNU Bash's actual parser.
 
 ## Installation
 
-### Prerequisites
+### Homebrew (macOS)
+
+```bash
+# Install from tap (once published)
+brew tap cv/tap
+brew install bash-ast
+
+# Or install HEAD version directly
+brew install --HEAD https://raw.githubusercontent.com/cv/bash-ast/main/Formula/bash-ast.rb
+```
+
+### From source
+
+#### Prerequisites
 
 - Rust 1.70 or later
 - LLVM/Clang (for bindgen)
