@@ -115,10 +115,14 @@ jobs:
 
       - name: Generate updated formula
         run: |
+          # Extract version number without 'v' prefix for Homebrew
+          TAG="${{ steps.release_info.outputs.tag }}"
+          VERSION="${TAG#v}"
+          
           # Update the formula with the new version and revision
           sed -i \
-            -e 's/VERSION_PLACEHOLDER/${{ steps.release_info.outputs.tag }}/' \
-            -e 's/REVISION_PLACEHOLDER/${{ steps.release_info.outputs.revision }}/' \
+            -e "s/VERSION_TAG_PLACEHOLDER/${TAG}/" \
+            -e "s/REVISION_PLACEHOLDER/${{ steps.release_info.outputs.revision }}/" \
             Formula/bash-ast.rb
           
           echo "Updated formula:"
