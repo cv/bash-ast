@@ -37,6 +37,15 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Set version from tag
+        run: |
+          # Extract version from tag (e.g., v0.1.0 -> 0.1.0)
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Setting version to $VERSION"
+          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" Cargo.toml
+          rm -f Cargo.toml.bak
+          grep "^version" Cargo.toml
+
       - name: Build
         run: cargo build --release
 
