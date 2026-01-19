@@ -368,10 +368,7 @@ mod convert_impl {
         })
     }
 
-    unsafe fn convert_pattern_list(
-        list: *mut ffi::PATTERN_LIST,
-        depth: usize,
-    ) -> Vec<CaseClause> {
+    unsafe fn convert_pattern_list(list: *mut ffi::PATTERN_LIST, depth: usize) -> Vec<CaseClause> {
         let mut clauses = Vec::new();
         let mut current = list;
         let mut count = 0;
@@ -449,11 +446,7 @@ mod convert_impl {
         })
     }
 
-    unsafe fn convert_function_def(
-        cmd: &ffi::COMMAND,
-        line: u32,
-        depth: usize,
-    ) -> Option<Command> {
+    unsafe fn convert_function_def(cmd: &ffi::COMMAND, line: u32, depth: usize) -> Option<Command> {
         let func_def = &*cmd.value.Function_def;
 
         let name = cstr_to_string((*func_def.name).word);

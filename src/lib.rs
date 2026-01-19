@@ -239,8 +239,7 @@ fn parse_internal(script: &str, verbose: bool) -> Result<Command, ParseError> {
             return Err(ParseError::SyntaxError(None));
         }
 
-        let result =
-            convert::convert_command(cmd_ptr).ok_or(ParseError::ConversionError(None));
+        let result = convert::convert_command(cmd_ptr).ok_or(ParseError::ConversionError(None));
 
         // Clean up the parsed command
         ffi::dispose_command(cmd_ptr);

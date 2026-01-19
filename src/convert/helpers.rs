@@ -43,7 +43,9 @@ pub(super) unsafe fn convert_word_list(list: *mut ffi::WORD_LIST) -> Vec<Word> {
 }
 
 /// Convert a `WORD_LIST` to a Vec of Strings (word text only)
-pub(super) unsafe fn convert_word_list_to_strings(list: *mut ffi::WORD_LIST) -> Option<Vec<String>> {
+pub(super) unsafe fn convert_word_list_to_strings(
+    list: *mut ffi::WORD_LIST,
+) -> Option<Vec<String>> {
     if list.is_null() {
         return None;
     }
