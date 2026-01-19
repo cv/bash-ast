@@ -20,11 +20,17 @@
 //! println!("{}", json);
 //! ```
 //!
-//! # Safety
+//! # Thread Safety
 //!
-//! This crate uses FFI to call into GNU Bash's C code. The parser
-//! uses global state, so parsing is not thread-safe. All parsing
-//! should be done from a single thread.
+//! **Important:** This crate is NOT thread-safe. The underlying bash parser
+//! uses global state that cannot be safely accessed from multiple threads.
+//!
+//! - Call [`init()`] once from your main thread before parsing
+//! - Perform all parsing operations from a single thread
+//! - For tests, set `RUST_TEST_THREADS=1` or use `cargo test -- --test-threads=1`
+//!
+//! The [`init()`] function uses `std::sync::Once` internally, making it safe
+//! to call multiple times (subsequent calls are no-ops).
 //!
 //! # License
 //!
@@ -75,16 +81,69 @@ pub enum ParseError {
 /// This must be called once before any parsing operations.
 /// It is safe to call multiple times - subsequent calls are no-ops.
 ///
+/// # Thread Safety
+///
+/// While this function is safe to call from multiple threads (it uses
+/// `std::sync::Once` internally), the actual parsing operations are
+/// NOT thread-safe. Call this from your main thread, then ensure all
+/// parsing happens on a single thread.
+///
 /// # Example
 ///
 /// ```no_run
 /// use bash_ast::init;
 ///
 /// init();
-/// // Now you can parse scripts
+/// // Now you can parse scripts (from a single thread)
 /// ```
 pub fn init() {
     bash_init::init();
+}
+
+/// Test utilities for bash-ast
+///
+/// This module provides helper functions for writing tests that use bash-ast.
+/// These utilities handle initialization and provide better error messages.
+///
+/// # Example
+///
+/// ```no_run
+/// use bash_ast::test_utils;
+///
+/// #[test]
+/// fn my_test() {
+///     test_utils::setup();
+///     // Your test code here
+/// }
+/// ```
+pub mod test_utils {
+    use super::init;
+
+    /// Initialize bash for testing
+    ///
+    /// This is a convenience function for tests that calls [`init()`].
+    /// It's safe to call multiple times.
+    ///
+    /// **Important:** Tests using bash-ast must run single-threaded.
+    /// Configure this via:
+    /// - `.cargo/config.toml`: `RUST_TEST_THREADS = "1"`
+    /// - Command line: `cargo test -- --test-threads=1`
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use bash_ast::test_utils;
+    ///
+    /// #[test]
+    /// fn test_parsing() {
+    ///     test_utils::setup();
+    ///     let result = bash_ast::parse("echo hello");
+    ///     assert!(result.is_ok());
+    /// }
+    /// ```
+    pub fn setup() {
+        init();
+    }
 }
 
 /// Parse a bash script and return the AST
