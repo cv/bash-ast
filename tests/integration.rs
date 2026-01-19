@@ -553,7 +553,7 @@ fn test_syntax_errors() {
 
     for script in error_cases {
         let err = parse_err(script);
-        assert!(matches!(err, ParseError::SyntaxError));
+        assert!(matches!(err, ParseError::SyntaxError(_)));
     }
 }
 

@@ -50,12 +50,12 @@ pub const MAX_SCRIPT_SIZE: usize = 10 * 1024 * 1024;
 #[derive(Debug, Error)]
 pub enum ParseError {
     /// The input contained a syntax error
-    #[error("Syntax error in script")]
-    SyntaxError,
+    #[error("Syntax error in script{}", .0.as_ref().map(|d| format!(": {d}")).unwrap_or_default())]
+    SyntaxError(Option<String>),
 
     /// Failed to convert the parsed AST
-    #[error("Failed to convert AST to Rust types")]
-    ConversionError,
+    #[error("Failed to convert AST to Rust types{}", .0.as_ref().map(|d| format!(": {d}")).unwrap_or_default())]
+    ConversionError(Option<String>),
 
     /// The input contained a NUL byte
     #[error("Invalid string: {0}")]
@@ -177,10 +177,11 @@ fn parse_internal(script: &str, verbose: bool) -> Result<Command, ParseError> {
         };
 
         if cmd_ptr.is_null() {
-            return Err(ParseError::SyntaxError);
+            return Err(ParseError::SyntaxError(None));
         }
 
-        let result = convert::convert_command(cmd_ptr).ok_or(ParseError::ConversionError);
+        let result =
+            convert::convert_command(cmd_ptr).ok_or(ParseError::ConversionError(None));
 
         // Clean up the parsed command
         ffi::dispose_command(cmd_ptr);
@@ -353,7 +354,7 @@ mod tests {
         // This should return an error instead of crashing, thanks to
         // safe_parse_string_to_command which catches the longjmp
         let result = parse("if then fi");
-        assert!(matches!(result, Err(ParseError::SyntaxError)));
+        assert!(matches!(result, Err(ParseError::SyntaxError(_))));
     }
 
     #[test]
