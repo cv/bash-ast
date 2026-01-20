@@ -5,7 +5,7 @@
 use bash_ast::{init, parse_to_json, schema_json};
 use std::env;
 use std::fs;
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::process::ExitCode;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -22,7 +22,7 @@ DESCRIPTION:
     compatibility with bash syntax.
 
 ARGUMENTS:
-    [FILE]    Bash script file to parse. If omitted, reads from stdin.
+    [FILE]    Bash script file to parse. Use '-' to read from stdin explicitly.
 
 OPTIONS:
     -h, --help       Print this help message and exit
@@ -34,11 +34,14 @@ EXAMPLES:
     # Parse a script file
     bash-ast script.sh
 
-    # Parse from stdin
+    # Parse from stdin (piped)
     echo 'echo hello' | bash-ast
 
     # Parse inline with here-string
     bash-ast <<< 'for i in a b c; do echo $i; done'
+
+    # Read from stdin interactively (use '-' to wait for input)
+    bash-ast -
 
     # Compact output for piping
     bash-ast -c script.sh | jq '.commands[]'
@@ -82,7 +85,9 @@ MORE INFO:
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
-    run(&args[1..], io::stdin().lock(), io::stdout(), io::stderr())
+    let stdin = io::stdin();
+    let is_tty = stdin.is_terminal();
+    run(&args[1..], stdin.lock(), io::stdout(), io::stderr(), is_tty)
 }
 
 #[derive(Debug, Default)]
@@ -105,6 +110,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
             "-V" | "--version" => config.version = true,
             "-c" | "--compact" => config.compact = true,
             "-s" | "--schema" => config.schema = true,
+            "-" => positional.push(arg.clone()), // `-` means read from stdin
             s if s.starts_with('-') => {
                 return Err(format!(
                     "Unknown option: {s}\nTry 'bash-ast --help' for usage."
@@ -126,7 +132,13 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
 }
 
 /// Run the CLI with the given arguments and input/output streams
-fn run<R, W, E>(args: &[String], mut input: R, mut output: W, mut error: E) -> ExitCode
+fn run<R, W, E>(
+    args: &[String],
+    mut input: R,
+    mut output: W,
+    mut error: E,
+    stdin_is_tty: bool,
+) -> ExitCode
 where
     R: BufRead,
     W: Write,
@@ -141,8 +153,10 @@ where
         }
     };
 
-    // Handle --help
-    if config.help {
+    // Handle --help, or show help if no file/stdin and stdin is a TTY (no piped input)
+    // Users can use `-` to explicitly read from stdin even in a TTY
+    let reading_stdin = config.file.as_deref() == Some("-");
+    if config.help || (config.file.is_none() && !config.schema && stdin_is_tty && !reading_stdin) {
         let _ = write!(output, "{HELP}");
         return ExitCode::SUCCESS;
     }
@@ -160,22 +174,23 @@ where
         return ExitCode::SUCCESS;
     }
 
-    // Read script from file or stdin
-    let script = if let Some(ref path) = config.file {
-        match fs::read_to_string(path) {
+    // Read script from file or stdin (use "-" to explicitly read from stdin)
+    let script = match config.file.as_deref() {
+        Some("-") | None => {
+            let mut content = String::new();
+            if let Err(e) = input.read_to_string(&mut content) {
+                let _ = writeln!(error, "Error reading stdin: {e}");
+                return ExitCode::from(1);
+            }
+            content
+        }
+        Some(path) => match fs::read_to_string(path) {
             Ok(content) => content,
             Err(e) => {
                 let _ = writeln!(error, "Error reading '{path}': {e}");
                 return ExitCode::from(1);
             }
-        }
-    } else {
-        let mut content = String::new();
-        if let Err(e) = input.read_to_string(&mut content) {
-            let _ = writeln!(error, "Error reading stdin: {e}");
-            return ExitCode::from(1);
-        }
-        content
+        },
     };
 
     // Initialize bash parser
@@ -208,14 +223,19 @@ mod tests {
     }
 
     impl TestRun {
-        /// Run CLI with given args and stdin content
+        /// Run CLI with given args and stdin content (simulates piped input)
         fn new(cli_args: &[&str], stdin: &str) -> Self {
+            Self::with_tty(cli_args, stdin, false)
+        }
+
+        /// Run CLI with given args, stdin content, and TTY flag
+        fn with_tty(cli_args: &[&str], stdin: &str, stdin_is_tty: bool) -> Self {
             let input = Cursor::new(stdin.to_string());
             let mut output = Vec::new();
             let mut error = Vec::new();
 
             let args: Vec<String> = cli_args.iter().map(|&s| s.to_string()).collect();
-            let exit_code = run(&args, input, &mut output, &mut error);
+            let exit_code = run(&args, input, &mut output, &mut error, stdin_is_tty);
 
             Self {
                 exit_code,
@@ -345,5 +365,40 @@ mod tests {
         assert!(t.success());
         assert!(t.stdout.contains("\"type\": \"for\""));
         assert!(t.stderr.is_empty());
+    }
+
+    #[test]
+    fn test_no_args_tty_shows_help() {
+        // When stdin is a TTY and no args given, show help
+        let t = TestRun::with_tty(&[], "", true);
+        assert!(t.success());
+        assert!(t.stdout.contains("USAGE:"));
+        assert!(t.stdout.contains("bash-ast"));
+        assert!(t.stderr.is_empty());
+    }
+
+    #[test]
+    fn test_no_args_piped_empty_is_error() {
+        // When stdin is piped (not TTY) but empty, it's an error
+        let t = TestRun::with_tty(&[], "", false);
+        assert_eq!(t.exit_code, ExitCode::from(1));
+        assert!(t.stderr.contains("Error"));
+    }
+
+    #[test]
+    fn test_dash_reads_stdin_even_on_tty() {
+        // Using `-` explicitly reads from stdin, even if it's a TTY
+        let t = TestRun::with_tty(&["-"], "echo hello", true);
+        assert!(t.success());
+        assert!(t.stdout.contains("\"type\": \"simple\""));
+        assert!(t.stdout.contains("echo"));
+    }
+
+    #[test]
+    fn test_dash_reads_stdin_piped() {
+        // Using `-` works the same as no arg when piped
+        let t = TestRun::new(&["-"], "echo hello");
+        assert!(t.success());
+        assert!(t.stdout.contains("\"type\": \"simple\""));
     }
 }
