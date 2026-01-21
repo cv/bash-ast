@@ -119,25 +119,60 @@ fn write_simple(
     assignments: Option<&[String]>,
     out: &mut String,
 ) {
-    // Write assignments first
-    if let Some(assigns) = assignments {
-        for (i, assign) in assigns.iter().enumerate() {
+    // Check if the command is a builtin that takes assignments as arguments
+    // (like local, export, declare, readonly, typeset)
+    let is_assignment_builtin = words
+        .first()
+        .map(|w| {
+            matches!(
+                w.word.as_str(),
+                "local" | "export" | "declare" | "readonly" | "typeset"
+            )
+        })
+        .unwrap_or(false);
+
+    if is_assignment_builtin {
+        // For assignment builtins: cmd assignments...
+        // Write command word first
+        if let Some(word) = words.first() {
+            out.push_str(&word.word);
+        }
+
+        // Write remaining words
+        for word in words.iter().skip(1) {
+            out.push(' ');
+            out.push_str(&word.word);
+        }
+
+        // Write assignments after
+        if let Some(assigns) = assignments {
+            for assign in assigns {
+                out.push(' ');
+                out.push_str(assign);
+            }
+        }
+    } else {
+        // For regular commands: assignments cmd args...
+        // Write assignments first (VAR=value cmd)
+        if let Some(assigns) = assignments {
+            for (i, assign) in assigns.iter().enumerate() {
+                if i > 0 {
+                    out.push(' ');
+                }
+                out.push_str(assign);
+            }
+            if !words.is_empty() {
+                out.push(' ');
+            }
+        }
+
+        // Write command words
+        for (i, word) in words.iter().enumerate() {
             if i > 0 {
                 out.push(' ');
             }
-            out.push_str(assign);
+            out.push_str(&word.word);
         }
-        if !words.is_empty() {
-            out.push(' ');
-        }
-    }
-
-    // Write command words
-    for (i, word) in words.iter().enumerate() {
-        if i > 0 {
-            out.push(' ');
-        }
-        out.push_str(&word.word);
     }
 
     // Write redirects
@@ -834,5 +869,20 @@ mod tests {
     #[test]
     fn test_redirect_clobber() {
         assert_round_trip("echo hello >|file");
+    }
+
+    #[test]
+    fn test_local_assignment() {
+        assert_round_trip("local name=value");
+    }
+
+    #[test]
+    fn test_export_assignment() {
+        assert_round_trip("export PATH=/usr/bin");
+    }
+
+    #[test]
+    fn test_declare_assignment() {
+        assert_round_trip("declare -r CONST=42");
     }
 }
