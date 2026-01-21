@@ -30,6 +30,11 @@ pub fn to_bash(cmd: &Command) -> String {
 
 /// Write a command to the output string
 fn write_command(cmd: &Command, out: &mut String) {
+    write_command_impl(cmd, out, true);
+}
+
+/// Write a command, optionally including heredoc content
+fn write_command_impl(cmd: &Command, out: &mut String, include_heredoc_content: bool) {
     match cmd {
         Command::Simple {
             words,
@@ -37,7 +42,13 @@ fn write_command(cmd: &Command, out: &mut String) {
             assignments,
             ..
         } => {
-            write_simple(words, redirects, assignments.as_deref(), out);
+            write_simple_impl(
+                words,
+                redirects,
+                assignments.as_deref(),
+                out,
+                include_heredoc_content,
+            );
         }
         Command::Pipeline {
             commands, negated, ..
@@ -119,11 +130,12 @@ fn write_command(cmd: &Command, out: &mut String) {
 }
 
 /// Write a simple command (cmd arg1 arg2 ...)
-fn write_simple(
+fn write_simple_impl(
     words: &[Word],
     redirects: &[Redirect],
     assignments: Option<&[String]>,
     out: &mut String,
+    include_heredoc_content: bool,
 ) {
     // Check if the command is a builtin that takes assignments as arguments
     // (like local, export, declare, readonly, typeset)
@@ -179,12 +191,17 @@ fn write_simple(
     }
 
     // Write redirects
-    write_redirects(redirects, out);
+    write_redirects_impl(redirects, out, include_heredoc_content);
 }
 
 /// Write multiple redirects
 /// Heredocs are handled specially - their content comes after all other redirects
 fn write_redirects(redirects: &[Redirect], out: &mut String) {
+    write_redirects_impl(redirects, out, true);
+}
+
+/// Write redirects, optionally including heredoc content
+fn write_redirects_impl(redirects: &[Redirect], out: &mut String, include_heredoc_content: bool) {
     // First pass: write non-heredoc redirects
     for redirect in redirects {
         if redirect.direction != RedirectType::HereDoc {
@@ -199,11 +216,13 @@ fn write_redirects(redirects: &[Redirect], out: &mut String) {
             write_heredoc_marker(redirect, out);
         }
     }
-    // Third pass: write heredoc content (after a newline)
-    for redirect in redirects {
-        if redirect.direction == RedirectType::HereDoc {
-            out.push('\n');
-            write_heredoc_content(redirect, out);
+    // Third pass: write heredoc content (after a newline) if requested
+    if include_heredoc_content {
+        for redirect in redirects {
+            if redirect.direction == RedirectType::HereDoc {
+                out.push('\n');
+                write_heredoc_content(redirect, out);
+            }
         }
     }
 }
@@ -329,9 +348,103 @@ fn write_pipeline(commands: &[Command], negated: bool, out: &mut String) {
     }
 }
 
+/// Get the line number of the first token in a command
+const fn get_command_line(cmd: &Command) -> Option<u32> {
+    match cmd {
+        Command::Simple { line, .. }
+        | Command::Pipeline { line, .. }
+        | Command::List { line, .. }
+        | Command::For { line, .. }
+        | Command::While { line, .. }
+        | Command::Until { line, .. }
+        | Command::If { line, .. }
+        | Command::Case { line, .. }
+        | Command::Select { line, .. }
+        | Command::Group { line, .. }
+        | Command::Subshell { line, .. }
+        | Command::FunctionDef { line, .. }
+        | Command::Arithmetic { line, .. }
+        | Command::ArithmeticFor { line, .. }
+        | Command::Conditional { line, .. }
+        | Command::Coproc { line, .. } => *line,
+    }
+}
+
+/// Check if a command has any heredoc redirects (requires newline after)
+fn has_heredoc(cmd: &Command) -> bool {
+    let redirects = match cmd {
+        Command::Simple { redirects, .. }
+        | Command::For { redirects, .. }
+        | Command::While { redirects, .. }
+        | Command::Until { redirects, .. }
+        | Command::If { redirects, .. }
+        | Command::Case { redirects, .. }
+        | Command::Select { redirects, .. }
+        | Command::Group { redirects, .. }
+        | Command::Subshell { redirects, .. } => redirects,
+        Command::List { left, right, .. } => {
+            return has_heredoc(left) || has_heredoc(right);
+        }
+        Command::Pipeline { commands, .. } => {
+            return commands.iter().any(has_heredoc);
+        }
+        _ => return false,
+    };
+    redirects
+        .iter()
+        .any(|r| r.direction == RedirectType::HereDoc)
+}
+
+/// Collect all heredocs from a command tree
+fn collect_heredocs(cmd: &Command) -> Vec<&Redirect> {
+    let mut heredocs = Vec::new();
+    collect_heredocs_impl(cmd, &mut heredocs);
+    heredocs
+}
+
+fn collect_heredocs_impl<'a>(cmd: &'a Command, heredocs: &mut Vec<&'a Redirect>) {
+    match cmd {
+        Command::Simple { redirects, .. }
+        | Command::For { redirects, .. }
+        | Command::While { redirects, .. }
+        | Command::Until { redirects, .. }
+        | Command::If { redirects, .. }
+        | Command::Case { redirects, .. }
+        | Command::Select { redirects, .. }
+        | Command::Group { redirects, .. }
+        | Command::Subshell { redirects, .. } => {
+            for r in redirects {
+                if r.direction == RedirectType::HereDoc {
+                    heredocs.push(r);
+                }
+            }
+        }
+        Command::List { left, right, .. } => {
+            collect_heredocs_impl(left, heredocs);
+            collect_heredocs_impl(right, heredocs);
+        }
+        Command::Pipeline { commands, .. } => {
+            for c in commands {
+                collect_heredocs_impl(c, heredocs);
+            }
+        }
+        _ => {}
+    }
+}
+
 /// Write a list (cmd1 && cmd2, cmd1 || cmd2, etc.)
 fn write_list(op: ListOp, left: &Command, right: &Command, out: &mut String) {
-    write_command(left, out);
+    // For And/Or with heredocs, we need special handling:
+    // The heredoc content must come AFTER the entire command line
+    let left_has_heredoc = has_heredoc(left);
+    let defer_heredocs = (op == ListOp::And || op == ListOp::Or) && left_has_heredoc;
+
+    if defer_heredocs {
+        // Write left command without heredoc content
+        write_command_impl(left, out, false);
+    } else {
+        write_command(left, out);
+    }
 
     // Check if right side is empty (e.g., "cmd &" has empty right side)
     let right_is_empty = matches!(
@@ -340,9 +453,20 @@ fn write_list(op: ListOp, left: &Command, right: &Command, out: &mut String) {
         if words.is_empty() && redirects.is_empty() && assignments.is_none()
     );
 
+    // For semi, use newline if:
+    // 1. Commands are on different lines, OR
+    // 2. Left command has a heredoc (heredoc content requires newline after delimiter)
+    let use_newline = op == ListOp::Semi
+        && (left_has_heredoc
+            || match (get_command_line(left), get_command_line(right)) {
+                (Some(l), Some(r)) => r > l,
+                _ => false,
+            });
+
     match op {
         ListOp::And => out.push_str(" && "),
         ListOp::Or => out.push_str(" || "),
+        ListOp::Semi if use_newline => out.push('\n'),
         ListOp::Semi => out.push_str("; "),
         ListOp::Amp => {
             out.push_str(" &");
@@ -355,6 +479,14 @@ fn write_list(op: ListOp, left: &Command, right: &Command, out: &mut String) {
 
     if !right_is_empty {
         write_command(right, out);
+    }
+
+    // Now write deferred heredoc content
+    if defer_heredocs {
+        for heredoc in collect_heredocs(left) {
+            out.push('\n');
+            write_heredoc_content(heredoc, out);
+        }
     }
 }
 

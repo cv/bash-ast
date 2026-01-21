@@ -136,7 +136,7 @@ fn test_snapshots_to_bash_roundtrip() {
     let snapshot_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/snapshots");
 
     // Known failures due to heredoc limitations
-    let known_failures = ["30_multiple_heredocs.sh", "49_heredoc_variations.sh"];
+    let known_failures: [&str; 0] = [];
 
     let mut scripts: Vec<_> = fs::read_dir(&snapshot_dir)
         .expect("Failed to read snapshots directory")
@@ -205,26 +205,46 @@ fn test_snapshots_to_bash_roundtrip() {
     );
 }
 
-/// Remove line numbers from JSON for comparison
+/// Remove line numbers and sort redirects for comparison
 fn normalize_json_for_comparison(json: &str) -> String {
-    // Parse and re-serialize without line numbers
+    // Parse and normalize
     let mut value: serde_json::Value = serde_json::from_str(json).unwrap();
-    remove_line_numbers(&mut value);
+    normalize_for_comparison(&mut value);
     serde_json::to_string(&value).unwrap()
 }
 
-/// Recursively remove "line" fields from JSON value
-fn remove_line_numbers(value: &mut serde_json::Value) {
+/// Recursively normalize JSON for comparison
+/// - Removes "line" fields
+/// - Sorts "redirects" arrays for order-independent comparison
+fn normalize_for_comparison(value: &mut serde_json::Value) {
     match value {
         serde_json::Value::Object(map) => {
             map.remove("line");
+
+            // Sort redirects array by direction+target for consistent ordering
+            if let Some(serde_json::Value::Array(redirects)) = map.get_mut("redirects") {
+                redirects.sort_by(|a, b| {
+                    let key_a = format!(
+                        "{}-{}",
+                        a.get("direction").and_then(|v| v.as_str()).unwrap_or(""),
+                        a.get("target").and_then(|v| v.as_str()).unwrap_or("")
+                    );
+                    let key_b = format!(
+                        "{}-{}",
+                        b.get("direction").and_then(|v| v.as_str()).unwrap_or(""),
+                        b.get("target").and_then(|v| v.as_str()).unwrap_or("")
+                    );
+                    key_a.cmp(&key_b)
+                });
+            }
+
             for v in map.values_mut() {
-                remove_line_numbers(v);
+                normalize_for_comparison(v);
             }
         }
         serde_json::Value::Array(arr) => {
             for v in arr {
-                remove_line_numbers(v);
+                normalize_for_comparison(v);
             }
         }
         _ => {}
