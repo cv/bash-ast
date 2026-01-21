@@ -33,12 +33,39 @@ Parse bash scripts to JSON AST using GNU Bash's actual parser, and convert AST b
 ### Homebrew (macOS)
 
 ```bash
-# Install from tap (once published)
-brew tap cv/tap
+# Install from tap
+brew tap cv/taps
 brew install bash-ast
 
 # Or install HEAD version directly
 brew install --HEAD https://raw.githubusercontent.com/cv/bash-ast/main/Formula/bash-ast.rb
+```
+
+### Debian / Ubuntu
+
+Download the `.deb` package from the [releases page](https://github.com/cv/bash-ast/releases):
+
+```bash
+# Download (replace VERSION with actual version)
+curl -LO https://github.com/cv/bash-ast/releases/download/vVERSION/bash-ast_VERSION-1_amd64.deb
+
+# Install
+sudo dpkg -i bash-ast_VERSION-1_amd64.deb
+```
+
+### RedHat / Fedora / CentOS
+
+Download the `.rpm` package from the [releases page](https://github.com/cv/bash-ast/releases):
+
+```bash
+# Download (replace VERSION with actual version)
+curl -LO https://github.com/cv/bash-ast/releases/download/vVERSION/bash-ast-VERSION-1.x86_64.rpm
+
+# Install
+sudo rpm -i bash-ast-VERSION-1.x86_64.rpm
+
+# Or with dnf (Fedora)
+sudo dnf install ./bash-ast-VERSION-1.x86_64.rpm
 ```
 
 ### From source

@@ -65,6 +65,58 @@ jobs:
           name: bash-ast-${{ matrix.target }}
           path: bash-ast-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
 
+  linux-packages:
+    name: Build Linux Packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libncurses-dev rpm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install packaging tools
+        run: cargo install cargo-deb cargo-generate-rpm
+
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Setting version to $VERSION"
+          sed -i "s/^version = .*/version = \"$VERSION\"/" Cargo.toml
+          grep "^version" Cargo.toml
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Build .deb package
+        run: |
+          cargo deb --no-build
+          ls -la target/debian/
+
+      - name: Build .rpm package
+        run: |
+          cargo generate-rpm
+          ls -la target/generate-rpm/
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-deb
+          path: target/debian/*.deb
+
+      - name: Upload .rpm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-rpm
+          path: target/generate-rpm/*.rpm
+
   bottle:
     name: Build Bottle (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -142,7 +194,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: [build, bottle]
+    needs: [build, bottle, linux-packages]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -164,6 +216,8 @@ jobs:
         with:
           files: |
             artifacts/*.tar.gz
+            artifacts/*.deb
+            artifacts/*.rpm
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}

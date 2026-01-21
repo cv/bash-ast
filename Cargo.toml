@@ -42,3 +42,24 @@ nursery = { level = "warn", priority = -1 }
 missing_errors_doc = "allow"        # We use thiserror, docs are clear
 missing_panics_doc = "allow"        # Build script panics are intentional
 module_name_repetitions = "allow"   # BashAst in bash_ast is fine
+
+# Debian/Ubuntu package metadata
+[package.metadata.deb]
+maintainer = "Carlos Villela <cv@lixo.org>"
+copyright = "2024-2026, Carlos Villela"
+depends = "$auto"
+section = "utils"
+priority = "optional"
+assets = [
+    ["target/release/bash-ast", "usr/bin/", "755"],
+    ["README.md", "usr/share/doc/bash-ast/", "644"],
+    ["LICENSE", "usr/share/doc/bash-ast/", "644"],
+]
+
+# RPM (RedHat/Fedora/CentOS) package metadata
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/bash-ast", dest = "/usr/bin/bash-ast", mode = "755" },
+    { source = "README.md", dest = "/usr/share/doc/bash-ast/README.md", mode = "644" },
+    { source = "LICENSE", dest = "/usr/share/doc/bash-ast/LICENSE", mode = "644" },
+]
