@@ -67,7 +67,7 @@ jobs:
 
   linux-packages:
     name: Build Linux Packages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # Use older glibc for wider compatibility
     steps:
       - uses: actions/checkout@v4
         with:
