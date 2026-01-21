@@ -122,3 +122,111 @@ fn test_snapshots_roundtrip() {
         );
     }
 }
+
+/// Test full roundtrip: parse -> `to_bash` -> parse -> compare AST
+///
+/// This verifies that `to_bash` produces valid bash that parses to an equivalent AST.
+/// Line numbers are ignored since regenerated code has different formatting.
+#[test]
+fn test_snapshots_to_bash_roundtrip() {
+    use bash_ast::{parse, to_bash};
+
+    setup();
+
+    let snapshot_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/snapshots");
+
+    // Known failures due to heredoc limitations
+    let known_failures = ["30_multiple_heredocs.sh", "49_heredoc_variations.sh"];
+
+    let mut scripts: Vec<_> = fs::read_dir(&snapshot_dir)
+        .expect("Failed to read snapshots directory")
+        .filter_map(std::result::Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|ext| ext == "sh"))
+        .collect();
+
+    scripts.sort();
+
+    let mut failures = Vec::new();
+
+    for script_path in &scripts {
+        let script_name = script_path.file_name().unwrap().to_string_lossy();
+
+        // Skip known failures
+        if known_failures.iter().any(|&f| script_name == f) {
+            continue;
+        }
+
+        let script = fs::read_to_string(script_path)
+            .unwrap_or_else(|e| panic!("Failed to read {script_path:?}: {e}"));
+
+        // Parse original
+        let ast1 = match parse(&script) {
+            Ok(ast) => ast,
+            Err(e) => {
+                failures.push(format!("{script_name}: failed to parse original: {e}"));
+                continue;
+            }
+        };
+
+        // Convert to bash
+        let regenerated = to_bash(&ast1);
+
+        // Parse regenerated
+        let ast2 = match parse(&regenerated) {
+            Ok(ast) => ast,
+            Err(e) => {
+                failures.push(format!(
+                    "{script_name}: failed to parse regenerated script: {e}\nRegenerated:\n{regenerated}"
+                ));
+                continue;
+            }
+        };
+
+        // Compare ASTs (ignoring line numbers)
+        let json1 = serde_json::to_string(&ast1).unwrap();
+        let json2 = serde_json::to_string(&ast2).unwrap();
+
+        let json1_normalized = normalize_json_for_comparison(&json1);
+        let json2_normalized = normalize_json_for_comparison(&json2);
+
+        if json1_normalized != json2_normalized {
+            failures.push(format!(
+                "{script_name}: AST mismatch after roundtrip\nOriginal AST:\n{json1}\nRegenerated script:\n{regenerated}\nRegenerated AST:\n{json2}"
+            ));
+        }
+    }
+
+    assert!(
+        failures.is_empty(),
+        "\n{} roundtrip test(s) failed:\n\n{}",
+        failures.len(),
+        failures.join("\n\n---\n\n")
+    );
+}
+
+/// Remove line numbers from JSON for comparison
+fn normalize_json_for_comparison(json: &str) -> String {
+    // Parse and re-serialize without line numbers
+    let mut value: serde_json::Value = serde_json::from_str(json).unwrap();
+    remove_line_numbers(&mut value);
+    serde_json::to_string(&value).unwrap()
+}
+
+/// Recursively remove "line" fields from JSON value
+fn remove_line_numbers(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            map.remove("line");
+            for v in map.values_mut() {
+                remove_line_numbers(v);
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            for v in arr {
+                remove_line_numbers(v);
+            }
+        }
+        _ => {}
+    }
+}
