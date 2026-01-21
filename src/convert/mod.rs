@@ -182,12 +182,25 @@ mod convert_impl {
             Some(assignments.into_iter().map(|w| w.word).collect())
         };
 
-        Some(Command::Simple {
+        let simple_cmd = Command::Simple {
             line: line_or_none(eff_line),
             words: command_words,
             redirects,
             assignments,
-        })
+        };
+
+        // Check if this command is negated with !
+        // If so, wrap it in a negated pipeline (since ! only applies to pipelines in bash)
+        let negated = (cmd.flags & CMD_INVERT_RETURN) != 0;
+        if negated {
+            Some(Command::Pipeline {
+                line: None,
+                commands: vec![simple_cmd],
+                negated: true,
+            })
+        } else {
+            Some(simple_cmd)
+        }
     }
 
     unsafe fn convert_connection(
@@ -296,12 +309,14 @@ mod convert_impl {
         let variable = cstr_to_string((*for_cmd.name).word);
         let words = convert_word_list_to_strings(for_cmd.map_list);
         let body = convert_command_with_depth(for_cmd.action, depth + 1)?;
+        let redirects = convert_redirects(cmd.redirects);
 
         Some(Command::For {
             line: line_or_none(eff_line),
             variable,
             words,
             body: Box::new(body),
+            redirects,
         })
     }
 
@@ -310,11 +325,13 @@ mod convert_impl {
 
         let test = convert_command_with_depth(while_cmd.test, depth + 1)?;
         let body = convert_command_with_depth(while_cmd.action, depth + 1)?;
+        let redirects = convert_redirects(cmd.redirects);
 
         Some(Command::While {
             line: line_or_none(line),
             test: Box::new(test),
             body: Box::new(body),
+            redirects,
         })
     }
 
@@ -324,11 +341,13 @@ mod convert_impl {
 
         let test = convert_command_with_depth(while_cmd.test, depth + 1)?;
         let body = convert_command_with_depth(while_cmd.action, depth + 1)?;
+        let redirects = convert_redirects(cmd.redirects);
 
         Some(Command::Until {
             line: line_or_none(line),
             test: Box::new(test),
             body: Box::new(body),
+            redirects,
         })
     }
 
@@ -345,12 +364,14 @@ mod convert_impl {
                 depth + 1,
             )?))
         };
+        let redirects = convert_redirects(cmd.redirects);
 
         Some(Command::If {
             line: line_or_none(line),
             condition: Box::new(condition),
             then_branch: Box::new(then_branch),
             else_branch,
+            redirects,
         })
     }
 
@@ -360,11 +381,13 @@ mod convert_impl {
         let eff_line = effective_line(case_cmd.line, line);
         let word = cstr_to_string((*case_cmd.word).word);
         let clauses = convert_pattern_list(case_cmd.clauses, depth);
+        let redirects = convert_redirects(cmd.redirects);
 
         Some(Command::Case {
             line: line_or_none(eff_line),
             word,
             clauses,
+            redirects,
         })
     }
 
@@ -415,12 +438,14 @@ mod convert_impl {
         let variable = cstr_to_string((*select_cmd.name).word);
         let words = convert_word_list_to_strings(select_cmd.map_list);
         let body = convert_command_with_depth(select_cmd.action, depth + 1)?;
+        let redirects = convert_redirects(cmd.redirects);
 
         Some(Command::Select {
             line: line_or_none(eff_line),
             variable,
             words,
             body: Box::new(body),
+            redirects,
         })
     }
 
@@ -428,10 +453,12 @@ mod convert_impl {
         let group_cmd = &*cmd.value.Group;
 
         let body = convert_command_with_depth(group_cmd.command, depth + 1)?;
+        let redirects = convert_redirects(cmd.redirects);
 
         Some(Command::Group {
             line: line_or_none(line),
             body: Box::new(body),
+            redirects,
         })
     }
 
@@ -439,10 +466,12 @@ mod convert_impl {
         let subshell_cmd = &*cmd.value.Subshell;
         let eff_line = effective_line(subshell_cmd.line, line);
         let body = convert_command_with_depth(subshell_cmd.command, depth + 1)?;
+        let redirects = convert_redirects(cmd.redirects);
 
         Some(Command::Subshell {
             line: line_or_none(eff_line),
             body: Box::new(body),
+            redirects,
         })
     }
 

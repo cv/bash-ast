@@ -55,7 +55,19 @@
           ],
           "redirects": []
         }
-      }
+      },
+      "redirects": [
+        {
+          "direction": "output",
+          "source_fd": 1,
+          "target": "out.txt"
+        },
+        {
+          "direction": "dup_output",
+          "source_fd": 2,
+          "target": 1
+        }
+      ]
     }
   },
   "right": {
@@ -84,6 +96,18 @@
         ],
         "redirects": []
       }
-    }
+    },
+    "redirects": [
+      {
+        "direction": "input",
+        "source_fd": 0,
+        "target": "in.txt"
+      },
+      {
+        "direction": "output",
+        "source_fd": 1,
+        "target": "out.txt"
+      }
+    ]
   }
 }

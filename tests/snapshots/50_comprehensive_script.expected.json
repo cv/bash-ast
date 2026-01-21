@@ -489,7 +489,14 @@
                       "CONFIG[\"${key// /}\"]=\"${value//\\\"/}\""
                     ]
                   }
-                }
+                },
+                "redirects": [
+                  {
+                    "direction": "input",
+                    "source_fd": 0,
+                    "target": "\"$config_file\""
+                  }
+                ]
               }
             }
           }
@@ -648,7 +655,14 @@
                       ]
                     }
                   }
-                }
+                },
+                "redirects": [
+                  {
+                    "direction": "input",
+                    "source_fd": 0,
+                    "target": "<(find \"${1:-.}\" -type f \\( -name \"*.txt\" -o -name \"*.log\" \\) -print0)"
+                  }
+                ]
               }
             },
             "right": {

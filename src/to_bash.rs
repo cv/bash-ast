@@ -47,46 +47,68 @@ fn write_command(cmd: &Command, out: &mut String) {
         Command::List {
             op, left, right, ..
         } => {
-            write_list(*op, left, right, out);
+            write_list(op, left, right, out);
         }
         Command::For {
             variable,
             words,
             body,
+            redirects,
             ..
         } => {
-            write_for(variable, words.as_deref(), body, out);
+            write_for(variable, words.as_deref(), body, redirects, out);
         }
-        Command::While { test, body, .. } => {
-            write_while(test, body, out);
+        Command::While {
+            test,
+            body,
+            redirects,
+            ..
+        } => {
+            write_while(test, body, redirects, out);
         }
-        Command::Until { test, body, .. } => {
-            write_until(test, body, out);
+        Command::Until {
+            test,
+            body,
+            redirects,
+            ..
+        } => {
+            write_until(test, body, redirects, out);
         }
         Command::If {
             condition,
             then_branch,
             else_branch,
+            redirects,
             ..
         } => {
-            write_if(condition, then_branch, else_branch.as_deref(), out);
+            write_if(condition, then_branch, else_branch.as_ref(), redirects, out);
         }
-        Command::Case { word, clauses, .. } => {
-            write_case(word, clauses, out);
+        Command::Case {
+            word,
+            clauses,
+            redirects,
+            ..
+        } => {
+            write_case(word, clauses, redirects, out);
         }
         Command::Select {
             variable,
             words,
             body,
+            redirects,
             ..
         } => {
-            write_select(variable, words.as_deref(), body, out);
+            write_select(variable, words.as_deref(), body, redirects, out);
         }
-        Command::Group { body, .. } => {
-            write_group(body, out);
+        Command::Group {
+            body, redirects, ..
+        } => {
+            write_group(body, redirects, out);
         }
-        Command::Subshell { body, .. } => {
-            write_subshell(body, out);
+        Command::Subshell {
+            body, redirects, ..
+        } => {
+            write_subshell(body, redirects, out);
         }
         Command::FunctionDef { name, body, .. } => {
             write_function_def(name, body, out);
@@ -121,12 +143,15 @@ fn write_simple(
 ) {
     // Check if the command is a builtin that takes assignments as arguments
     // (like local, export, declare, readonly, typeset)
-    let is_assignment_builtin = words.first().is_some_and(|w| {
-        matches!(
-            w.word.as_str(),
-            "local" | "export" | "declare" | "readonly" | "typeset"
-        )
-    });
+    let is_assignment_builtin = words
+        .first()
+        .map(|w| {
+            matches!(
+                w.word.as_str(),
+                "local" | "export" | "declare" | "readonly" | "typeset"
+            )
+        })
+        .unwrap_or(false);
 
     if is_assignment_builtin {
         // For assignment builtins: cmd assignments...
@@ -173,6 +198,11 @@ fn write_simple(
     }
 
     // Write redirects
+    write_redirects(redirects, out);
+}
+
+/// Write multiple redirects
+fn write_redirects(redirects: &[Redirect], out: &mut String) {
     for redirect in redirects {
         out.push(' ');
         write_redirect(redirect, out);
@@ -249,10 +279,12 @@ fn write_redirect(redirect: &Redirect, out: &mut String) {
         RedirectType::HereString => out.push_str("<<<"),
         RedirectType::InputOutput => out.push_str("<>"),
         RedirectType::Clobber => out.push_str(">|"),
-        RedirectType::DupInput | RedirectType::MoveInput => out.push_str("<&"),
-        RedirectType::DupOutput | RedirectType::MoveOutput => out.push_str(">&"),
+        RedirectType::DupInput => out.push_str("<&"),
+        RedirectType::DupOutput => out.push_str(">&"),
         RedirectType::ErrAndOut => out.push_str("&>"),
         RedirectType::AppendErrAndOut => out.push_str("&>>"),
+        RedirectType::MoveInput => out.push_str("<&"),
+        RedirectType::MoveOutput => out.push_str(">&"),
         RedirectType::HereDoc | RedirectType::Close => unreachable!(), // Handled above
     }
 
@@ -288,7 +320,7 @@ fn write_pipeline(commands: &[Command], negated: bool, out: &mut String) {
 }
 
 /// Write a list (cmd1 && cmd2, cmd1 || cmd2, etc.)
-fn write_list(op: ListOp, left: &Command, right: &Command, out: &mut String) {
+fn write_list(op: &ListOp, left: &Command, right: &Command, out: &mut String) {
     write_command(left, out);
 
     match op {
@@ -303,7 +335,13 @@ fn write_list(op: ListOp, left: &Command, right: &Command, out: &mut String) {
 }
 
 /// Write a for loop
-fn write_for(variable: &str, words: Option<&[String]>, body: &Command, out: &mut String) {
+fn write_for(
+    variable: &str,
+    words: Option<&[String]>,
+    body: &Command,
+    redirects: &[Redirect],
+    out: &mut String,
+) {
     out.push_str("for ");
     out.push_str(variable);
     if let Some(w) = words {
@@ -316,31 +354,35 @@ fn write_for(variable: &str, words: Option<&[String]>, body: &Command, out: &mut
     out.push_str("; do ");
     write_command(body, out);
     out.push_str("; done");
+    write_redirects(redirects, out);
 }
 
 /// Write a while loop
-fn write_while(test: &Command, body: &Command, out: &mut String) {
+fn write_while(test: &Command, body: &Command, redirects: &[Redirect], out: &mut String) {
     out.push_str("while ");
     write_command(test, out);
     out.push_str("; do ");
     write_command(body, out);
     out.push_str("; done");
+    write_redirects(redirects, out);
 }
 
 /// Write an until loop
-fn write_until(test: &Command, body: &Command, out: &mut String) {
+fn write_until(test: &Command, body: &Command, redirects: &[Redirect], out: &mut String) {
     out.push_str("until ");
     write_command(test, out);
     out.push_str("; do ");
     write_command(body, out);
     out.push_str("; done");
+    write_redirects(redirects, out);
 }
 
 /// Write an if statement
 fn write_if(
     condition: &Command,
     then_branch: &Command,
-    else_branch: Option<&Command>,
+    else_branch: Option<&Box<Command>>,
+    redirects: &[Redirect],
     out: &mut String,
 ) {
     out.push_str("if ");
@@ -355,7 +397,7 @@ fn write_if(
             then_branch: elif_then,
             else_branch: elif_else,
             ..
-        } = else_cmd
+        } = else_cmd.as_ref()
         {
             out.push_str("; elif ");
             write_command(elif_cond, out);
@@ -372,6 +414,7 @@ fn write_if(
     }
 
     out.push_str("; fi");
+    write_redirects(redirects, out);
 }
 
 /// Helper to write elif/else chains
@@ -397,7 +440,7 @@ fn write_else_chain(cmd: &Command, out: &mut String) {
 }
 
 /// Write a case statement
-fn write_case(word: &str, clauses: &[CaseClause], out: &mut String) {
+fn write_case(word: &str, clauses: &[CaseClause], redirects: &[Redirect], out: &mut String) {
     out.push_str("case ");
     out.push_str(word);
     out.push_str(" in ");
@@ -433,10 +476,17 @@ fn write_case(word: &str, clauses: &[CaseClause], out: &mut String) {
     }
 
     out.push_str("esac");
+    write_redirects(redirects, out);
 }
 
 /// Write a select statement
-fn write_select(variable: &str, words: Option<&[String]>, body: &Command, out: &mut String) {
+fn write_select(
+    variable: &str,
+    words: Option<&[String]>,
+    body: &Command,
+    redirects: &[Redirect],
+    out: &mut String,
+) {
     out.push_str("select ");
     out.push_str(variable);
     if let Some(w) = words {
@@ -449,20 +499,23 @@ fn write_select(variable: &str, words: Option<&[String]>, body: &Command, out: &
     out.push_str("; do ");
     write_command(body, out);
     out.push_str("; done");
+    write_redirects(redirects, out);
 }
 
 /// Write a brace group
-fn write_group(body: &Command, out: &mut String) {
+fn write_group(body: &Command, redirects: &[Redirect], out: &mut String) {
     out.push_str("{ ");
     write_command(body, out);
     out.push_str("; }");
+    write_redirects(redirects, out);
 }
 
 /// Write a subshell
-fn write_subshell(body: &Command, out: &mut String) {
+fn write_subshell(body: &Command, redirects: &[Redirect], out: &mut String) {
     out.push('(');
     write_command(body, out);
     out.push(')');
+    write_redirects(redirects, out);
 }
 
 /// Write a function definition
@@ -566,14 +619,15 @@ mod tests {
         init();
     }
 
-    /// Helper to test round-trip: parse -> `to_bash` -> parse -> compare structure
+    /// Helper to test round-trip: parse -> to_bash -> parse -> compare structure
     fn assert_round_trip(script: &str) {
         setup();
-        let ast1 = parse(script).unwrap_or_else(|_| panic!("Failed to parse original: {script}"));
+        let ast1 = parse(script).expect(&format!("Failed to parse original: {}", script));
         let regenerated = to_bash(&ast1);
-        let ast2 = parse(&regenerated).unwrap_or_else(|_| {
-            panic!("Failed to parse regenerated script: {regenerated}\nOriginal: {script}")
-        });
+        let ast2 = parse(&regenerated).expect(&format!(
+            "Failed to parse regenerated script: {}\nOriginal: {}",
+            regenerated, script
+        ));
 
         // Compare JSON representations (ignoring line numbers)
         let json1 = serde_json::to_string(&ast1).unwrap();
@@ -585,7 +639,8 @@ mod tests {
 
         assert_eq!(
             json1_no_lines, json2_no_lines,
-            "AST mismatch!\nOriginal: {script}\nRegenerated: {regenerated}\nAST1: {json1}\nAST2: {json2}"
+            "AST mismatch!\nOriginal: {}\nRegenerated: {}\nAST1: {}\nAST2: {}",
+            script, regenerated, json1, json2
         );
     }
 
@@ -596,8 +651,8 @@ mod tests {
         let mut chars = json.chars().peekable();
 
         while let Some(c) = chars.next() {
-            result.push(c);
             if c == '"' {
+                result.push(c);
                 // Read the key
                 let mut key = String::new();
                 while let Some(&nc) = chars.peek() {
@@ -627,6 +682,8 @@ mod tests {
                     let line_len = "\"line\"".len();
                     result.truncate(result.len() - line_len);
                 }
+            } else {
+                result.push(c);
             }
         }
 

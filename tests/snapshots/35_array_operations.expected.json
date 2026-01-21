@@ -94,7 +94,14 @@
             "line": 7,
             "expression": " counts[$ext]++ "
           }
-        }
+        },
+        "redirects": [
+          {
+            "direction": "input",
+            "source_fd": 0,
+            "target": "<(find . -type f -print0)"
+          }
+        ]
       }
     },
     "right": {

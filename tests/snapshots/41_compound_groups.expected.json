@@ -65,7 +65,19 @@
           ],
           "redirects": []
         }
-      }
+      },
+      "redirects": [
+        {
+          "direction": "output",
+          "source_fd": 1,
+          "target": "batch.log"
+        },
+        {
+          "direction": "dup_output",
+          "source_fd": 2,
+          "target": 1
+        }
+      ]
     },
     "right": {
       "type": "group",
@@ -98,7 +110,19 @@
           ],
           "redirects": []
         }
-      }
+      },
+      "redirects": [
+        {
+          "direction": "input",
+          "source_fd": 0,
+          "target": "data.csv"
+        },
+        {
+          "direction": "output",
+          "source_fd": 1,
+          "target": "body.csv"
+        }
+      ]
     }
   },
   "right": {

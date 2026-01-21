@@ -104,7 +104,14 @@
             }
           }
         ]
-      }
+      },
+      "redirects": [
+        {
+          "direction": "input",
+          "source_fd": 0,
+          "target": "\"$config\""
+        }
+      ]
     }
   }
 }

@@ -41,7 +41,14 @@
             }
           ],
           "redirects": []
-        }
+        },
+        "redirects": [
+          {
+            "direction": "input",
+            "source_fd": 0,
+            "target": "<(find . -type f -newer \"$marker\" -print)"
+          }
+        ]
       },
       "right": {
         "type": "simple",

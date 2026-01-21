@@ -47,6 +47,8 @@ pub enum Command {
         #[serde(skip_serializing_if = "Option::is_none")]
         words: Option<Vec<String>>,
         body: Box<Self>,
+        #[serde(skip_serializing_if = "Vec::is_empty", default)]
+        redirects: Vec<Redirect>,
     },
 
     /// While loop: `while test; do ...; done`
@@ -55,6 +57,8 @@ pub enum Command {
         line: Option<u32>,
         test: Box<Self>,
         body: Box<Self>,
+        #[serde(skip_serializing_if = "Vec::is_empty", default)]
+        redirects: Vec<Redirect>,
     },
 
     /// Until loop: `until test; do ...; done`
@@ -63,6 +67,8 @@ pub enum Command {
         line: Option<u32>,
         test: Box<Self>,
         body: Box<Self>,
+        #[serde(skip_serializing_if = "Vec::is_empty", default)]
+        redirects: Vec<Redirect>,
     },
 
     /// If statement: `if test; then ...; [elif ...; then ...;] [else ...;] fi`
@@ -73,6 +79,8 @@ pub enum Command {
         then_branch: Box<Self>,
         #[serde(skip_serializing_if = "Option::is_none")]
         else_branch: Option<Box<Self>>,
+        #[serde(skip_serializing_if = "Vec::is_empty", default)]
+        redirects: Vec<Redirect>,
     },
 
     /// Case statement: `case word in pattern) ...;; esac`
@@ -81,6 +89,8 @@ pub enum Command {
         line: Option<u32>,
         word: String,
         clauses: Vec<CaseClause>,
+        #[serde(skip_serializing_if = "Vec::is_empty", default)]
+        redirects: Vec<Redirect>,
     },
 
     /// Select statement: `select var in list; do ...; done`
@@ -91,6 +101,8 @@ pub enum Command {
         #[serde(skip_serializing_if = "Option::is_none")]
         words: Option<Vec<String>>,
         body: Box<Self>,
+        #[serde(skip_serializing_if = "Vec::is_empty", default)]
+        redirects: Vec<Redirect>,
     },
 
     /// Brace group: `{ ...; }`
@@ -98,6 +110,8 @@ pub enum Command {
         #[serde(skip_serializing_if = "Option::is_none")]
         line: Option<u32>,
         body: Box<Self>,
+        #[serde(skip_serializing_if = "Vec::is_empty", default)]
+        redirects: Vec<Redirect>,
     },
 
     /// Subshell: `( ... )`
@@ -105,6 +119,8 @@ pub enum Command {
         #[serde(skip_serializing_if = "Option::is_none")]
         line: Option<u32>,
         body: Box<Self>,
+        #[serde(skip_serializing_if = "Vec::is_empty", default)]
+        redirects: Vec<Redirect>,
     },
 
     /// Function definition: `name() { ...; }`
