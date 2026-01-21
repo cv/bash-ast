@@ -19,13 +19,26 @@ brew install cv/taps/bash-ast
 brew install --HEAD cv/taps/bash-ast
 ```
 
+## Pre-built bottles
+
+bash-ast provides pre-built bottles (binary packages) for:
+
+- **macOS ARM64** (Apple Silicon): Sonoma, Sequoia
+- **macOS x86_64** (Intel): Ventura
+- **Linux x86_64**: Ubuntu/Debian-based systems
+
+When you run `brew install bash-ast`, Homebrew will automatically download the pre-built bottle for your platform if available, making installation much faster (no compilation needed).
+
+If no bottle is available for your platform, Homebrew will build from source (requires Rust and LLVM).
+
 ## How it works
 
-When a new release is tagged (e.g., `v0.1.0`), the GitHub Actions workflow automatically:
+When a new release is tagged (e.g., `v0.2.8`), the GitHub Actions workflow automatically:
 
 1. Builds binaries for Linux and macOS (x86_64 and ARM64)
-2. Creates a GitHub release with the binaries
-3. Updates the formula in [cv/homebrew-taps](https://github.com/cv/homebrew-taps)
+2. Builds Homebrew bottles for supported platforms
+3. Creates a GitHub release with binaries and bottles
+4. Updates the formula in [cv/homebrew-taps](https://github.com/cv/homebrew-taps) with bottle checksums
 
 ## Setup (for maintainers)
 
@@ -45,14 +58,15 @@ The release workflow needs a Personal Access Token to push to the homebrew-taps 
 
 ```bash
 # Tag the release
-git tag -a v0.1.0 -m "Release v0.1.0"
-git push origin v0.1.0
+git tag -a v0.2.9 -m "Release v0.2.9"
+git push origin v0.2.9
 ```
 
 The workflow will automatically:
 - Build and test on all platforms
-- Create a GitHub release with binaries
-- Update the Homebrew formula in cv/homebrew-taps
+- Build Homebrew bottles for macOS (ARM64 + x86_64) and Linux
+- Create a GitHub release with binaries and bottles
+- Update the Homebrew formula in cv/homebrew-taps with bottle SHA256 checksums
 
 ### Manual formula update (if needed)
 
@@ -60,8 +74,16 @@ If you need to manually update the formula:
 
 ```bash
 # Get the commit SHA for the tag
-git rev-parse v0.1.0
+git rev-parse v0.2.9
 
 # Update Formula/bash-ast.rb with the tag and SHA
 # Then copy to homebrew-taps repo
+```
+
+### Force rebuild from source
+
+If you want to force building from source instead of using a bottle:
+
+```bash
+brew install --build-from-source cv/taps/bash-ast
 ```

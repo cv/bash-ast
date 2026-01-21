@@ -65,9 +65,94 @@ jobs:
           name: bash-ast-${{ matrix.target }}
           path: bash-ast-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
 
+  bottle:
+    name: Build Bottle (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14      # ARM64 (M1/M2) - Sonoma
+            bottle_tag: arm64_sonoma
+          - os: macos-15      # ARM64 - Sequoia
+            bottle_tag: arm64_sequoia
+          - os: macos-13      # x86_64 - Ventura
+            bottle_tag: ventura
+          - os: ubuntu-latest
+            bottle_tag: x86_64_linux
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libncurses-dev
+
+      - name: Tap and install formula for bottling
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_INSTALL_FROM_API: 1
+        run: |
+          # Create a local tap with updated formula
+          TAP_DIR="$(brew --repository)/Library/Taps/cv/homebrew-taps"
+          mkdir -p "$TAP_DIR/Formula"
+
+          # Get tag info
+          TAG="${{ github.ref_name }}"
+          REVISION="${{ github.sha }}"
+
+          # Update formula with tag and revision
+          sed \
+            -e "s/VERSION_TAG_PLACEHOLDER/${TAG}/" \
+            -e "s/REVISION_PLACEHOLDER/${REVISION}/" \
+            Formula/bash-ast.rb > "$TAP_DIR/Formula/bash-ast.rb"
+
+          echo "Formula contents:"
+          cat "$TAP_DIR/Formula/bash-ast.rb"
+
+          # Build bottle
+          brew install --build-bottle cv/taps/bash-ast
+
+      - name: Create bottle
+        run: |
+          cd $(mktemp -d)
+          brew bottle --no-rebuild --json cv/taps/bash-ast
+
+          # Rename bottle to standard format
+          # Homebrew creates: bash-ast--VERSION.BOTTLE_TAG.bottle.tar.gz
+          # We want: bash-ast-VERSION.BOTTLE_TAG.bottle.tar.gz
+          for f in bash-ast--*.bottle.tar.gz; do
+            newname="${f/bash-ast--/bash-ast-}"
+            mv "$f" "$newname" 2>/dev/null || true
+          done
+
+          # Also rename in JSON
+          for f in bash-ast--*.bottle.json; do
+            newname="${f/bash-ast--/bash-ast-}"
+            mv "$f" "$newname" 2>/dev/null || true
+          done
+
+          ls -la
+
+          # Move to workspace
+          mv bash-ast-*.bottle.* ${{ github.workspace }}/
+
+      - name: Upload bottle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bottle-${{ matrix.bottle_tag }}
+          path: |
+            bash-ast-*.bottle.tar.gz
+            bash-ast-*.bottle.json
+
   release:
     name: Create Release
-    needs: build
+    needs: [build, bottle]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -87,14 +172,15 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*.tar.gz
+          files: |
+            artifacts/*.tar.gz
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
 
   homebrew:
     name: Update Homebrew Formula
-    needs: release
+    needs: [release, bottle]
     runs-on: ubuntu-latest
     # Skip for prereleases
     if: ${{ !contains(github.ref_name, '-') }}
@@ -103,30 +189,86 @@ jobs:
       - name: Checkout bash-ast
         uses: actions/checkout@v4
 
-      - name: Get release info
-        id: release_info
+      - name: Download bottle artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bottle-*
+          path: bottles
+          merge-multiple: true
+
+      - name: List bottles
+        run: ls -la bottles/
+
+      - name: Generate bottle block
+        id: bottle
         run: |
-          # Get the tag name (e.g., v0.1.0)
           TAG="${{ github.ref_name }}"
-          # Get the full commit SHA for this tag
-          REVISION="${{ github.sha }}"
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-          echo "revision=${REVISION}" >> $GITHUB_OUTPUT
+          VERSION="${TAG#v}"
+
+          # Collect SHA256 hashes from JSON files
+          echo "Generating bottle block..."
+
+          BOTTLE_BLOCK="  bottle do"
+          BOTTLE_BLOCK+="\n    root_url \"https://github.com/cv/bash-ast/releases/download/${TAG}\""
+
+          # Process each bottle JSON file
+          for json_file in bottles/*.bottle.json; do
+            if [ -f "$json_file" ]; then
+              echo "Processing $json_file"
+              cat "$json_file"
+
+              # Extract tag and sha256 from JSON
+              # The JSON structure is: {"cv/taps/bash-ast": {"formula": {...}, "bottle": {"tags": {"arm64_sonoma": {"sha256": "..."}}}}}
+              TAGS=$(jq -r '.["cv/taps/bash-ast"].bottle.tags | keys[]' "$json_file" 2>/dev/null || jq -r '.[].bottle.tags | keys[]' "$json_file")
+
+              for tag in $TAGS; do
+                SHA=$(jq -r ".\"cv/taps/bash-ast\".bottle.tags.\"$tag\".sha256 // .[].bottle.tags.\"$tag\".sha256" "$json_file")
+                echo "  Tag: $tag, SHA: $SHA"
+                BOTTLE_BLOCK+="\n    sha256 cellar: :any_skip_relocation, $tag: \"$SHA\""
+              done
+            fi
+          done
+
+          BOTTLE_BLOCK+="\n  end"
+
+          echo "Generated bottle block:"
+          echo -e "$BOTTLE_BLOCK"
+
+          # Save to file for next step
+          echo -e "$BOTTLE_BLOCK" > bottle_block.txt
 
       - name: Generate updated formula
         run: |
-          # Extract version number without 'v' prefix for Homebrew
-          TAG="${{ steps.release_info.outputs.tag }}"
+          TAG="${{ github.ref_name }}"
           VERSION="${TAG#v}"
+          REVISION="${{ github.sha }}"
 
-          # Update the formula with the new version and revision
+          # Start with template
+          cp Formula/bash-ast.rb formula_updated.rb
+
+          # Update tag and revision
           sed -i \
             -e "s/VERSION_TAG_PLACEHOLDER/${TAG}/" \
-            -e "s/REVISION_PLACEHOLDER/${{ steps.release_info.outputs.revision }}/" \
-            Formula/bash-ast.rb
+            -e "s/REVISION_PLACEHOLDER/${REVISION}/" \
+            formula_updated.rb
 
-          echo "Updated formula:"
-          cat Formula/bash-ast.rb
+          # Insert bottle block after license line
+          BOTTLE_BLOCK=$(cat bottle_block.txt)
+
+          # Use awk to insert bottle block after license line
+          awk -v bottle="$BOTTLE_BLOCK" '
+            /^  license/ {
+              print
+              print bottle
+              next
+            }
+            { print }
+          ' formula_updated.rb > formula_final.rb
+
+          echo "Final formula:"
+          cat formula_final.rb
+
+          mv formula_final.rb Formula/bash-ast.rb
 
       - name: Checkout homebrew-taps
         uses: actions/checkout@v4
@@ -145,5 +287,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add Formula/bash-ast.rb
-          git diff --staged --quiet || git commit -m "bash-ast ${{ steps.release_info.outputs.tag }}"
+          git diff --staged --quiet || git commit -m "bash-ast ${{ github.ref_name }}"
           git push
