@@ -72,26 +72,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14      # ARM64 (M1/M2) - Sonoma
+          - os: macos-14           # ARM64 (M1/M2) - Sonoma
             bottle_tag: arm64_sonoma
-          - os: macos-15      # ARM64 - Sequoia
+          - os: macos-15           # ARM64 - Sequoia
             bottle_tag: arm64_sequoia
-          - os: macos-13      # x86_64 - Ventura
-            bottle_tag: ventura
-          - os: ubuntu-latest
-            bottle_tag: x86_64_linux
+          - os: macos-15-large     # x86_64 Intel - Sequoia
+            bottle_tag: sequoia
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
-
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libncurses-dev
 
       - name: Tap and install formula for bottling
         env:
