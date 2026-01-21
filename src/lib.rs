@@ -2,12 +2,13 @@
 //!
 //! This crate provides FFI bindings to GNU Bash's parser, allowing you to
 //! parse bash scripts into a JSON-serializable AST representation with
-//! 100% compatibility with bash syntax.
+//! 100% compatibility with bash syntax. It also supports converting AST
+//! back to executable bash code.
 //!
 //! # Example
 //!
 //! ```no_run
-//! use bash_ast::{parse, init};
+//! use bash_ast::{parse, to_bash, init};
 //!
 //! // Initialize bash (call once at startup)
 //! init();
@@ -18,6 +19,10 @@
 //! // Serialize to JSON
 //! let json = serde_json::to_string_pretty(&ast).unwrap();
 //! println!("{}", json);
+//!
+//! // Convert back to bash
+//! let script = to_bash(&ast);
+//! println!("{}", script); // "echo hello world"
 //! ```
 //!
 //! # Thread Safety
@@ -40,8 +45,10 @@ mod ast;
 mod bash_init;
 mod convert;
 mod ffi;
+mod to_bash;
 
 pub use ast::*;
+pub use to_bash::to_bash;
 
 use std::ffi::CString;
 use thiserror::Error;

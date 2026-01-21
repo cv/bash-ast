@@ -2,7 +2,7 @@
 //!
 //! Parses bash scripts and outputs JSON AST.
 
-use bash_ast::{init, parse_to_json, schema_json};
+use bash_ast::{init, parse_to_json, schema_json, to_bash, Command};
 use std::env;
 use std::fs;
 use std::io::{self, BufRead, IsTerminal, Write};
@@ -22,13 +22,15 @@ DESCRIPTION:
     compatibility with bash syntax.
 
 ARGUMENTS:
-    [FILE]    Bash script file to parse. Use '-' to read from stdin explicitly.
+    [FILE]    Bash script file to parse (or JSON AST with --to-bash).
+              Use '-' to read from stdin explicitly.
 
 OPTIONS:
     -h, --help       Print this help message and exit
     -V, --version    Print version information and exit
     -c, --compact    Output compact JSON (default: pretty-printed)
     -s, --schema     Print JSON Schema for the AST and exit
+    -b, --to-bash    Convert JSON AST back to bash script
 
 EXAMPLES:
     # Parse a script file
@@ -48,6 +50,9 @@ EXAMPLES:
 
     # Print JSON Schema for the AST output
     bash-ast --schema > schema.json
+
+    # Convert JSON AST back to bash
+    bash-ast script.sh | bash-ast --to-bash
 
 OUTPUT:
     On success, prints JSON AST to stdout and exits with code 0.
@@ -97,6 +102,7 @@ struct Config {
     version: bool,
     compact: bool,
     schema: bool,
+    to_bash: bool,
     file: Option<String>,
 }
 
@@ -110,6 +116,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
             "-V" | "--version" => config.version = true,
             "-c" | "--compact" => config.compact = true,
             "-s" | "--schema" => config.schema = true,
+            "-b" | "--to-bash" => config.to_bash = true,
             "-" => positional.push(arg.clone()), // `-` means read from stdin
             s if s.starts_with('-') => {
                 return Err(format!(
@@ -174,8 +181,8 @@ where
         return ExitCode::SUCCESS;
     }
 
-    // Read script from file or stdin (use "-" to explicitly read from stdin)
-    let script = match config.file.as_deref() {
+    // Read content from file or stdin (use "-" to explicitly read from stdin)
+    let content = match config.file.as_deref() {
         Some("-") | None => {
             let mut content = String::new();
             if let Err(e) = input.read_to_string(&mut content) {
@@ -193,12 +200,25 @@ where
         },
     };
 
+    // Handle --to-bash: convert JSON AST to bash script
+    if config.to_bash {
+        let ast: Command = match serde_json::from_str(&content) {
+            Ok(ast) => ast,
+            Err(e) => {
+                let _ = writeln!(error, "Error parsing JSON: {e}");
+                return ExitCode::from(1);
+            }
+        };
+        let _ = writeln!(output, "{}", to_bash(&ast));
+        return ExitCode::SUCCESS;
+    }
+
     // Initialize bash parser
     init();
 
     // Parse and output JSON
     let pretty = !config.compact;
-    match parse_to_json(&script, pretty) {
+    match parse_to_json(&content, pretty) {
         Ok(json) => {
             let _ = writeln!(output, "{json}");
             ExitCode::SUCCESS
@@ -400,5 +420,41 @@ mod tests {
         let t = TestRun::new(&["-"], "echo hello");
         assert!(t.success());
         assert!(t.stdout.contains("\"type\": \"simple\""));
+    }
+
+    #[test]
+    fn test_to_bash_simple() {
+        // Test --to-bash converts JSON AST back to bash
+        let json = r#"{"type":"simple","words":[{"word":"echo"},{"word":"hello"}],"redirects":[]}"#;
+        let t = TestRun::new(&["--to-bash"], json);
+        assert!(t.success());
+        assert!(t.stdout.contains("echo hello"));
+        assert!(t.stderr.is_empty());
+    }
+
+    #[test]
+    fn test_to_bash_short_option() {
+        // Test -b option
+        let json = r#"{"type":"simple","words":[{"word":"ls"},{"word":"-la"}],"redirects":[]}"#;
+        let t = TestRun::new(&["-b"], json);
+        assert!(t.success());
+        assert!(t.stdout.contains("ls -la"));
+    }
+
+    #[test]
+    fn test_to_bash_invalid_json() {
+        // Invalid JSON should error
+        let t = TestRun::new(&["--to-bash"], "not valid json");
+        assert_eq!(t.exit_code, ExitCode::from(1));
+        assert!(t.stderr.contains("Error parsing JSON"));
+    }
+
+    #[test]
+    fn test_to_bash_complex() {
+        // Test a more complex AST
+        let json = r#"{"type":"for","variable":"i","words":["a","b","c"],"body":{"type":"simple","words":[{"word":"echo"},{"word":"$i"}],"redirects":[]}}"#;
+        let t = TestRun::new(&["--to-bash"], json);
+        assert!(t.success());
+        assert!(t.stdout.contains("for i in a b c; do echo $i; done"));
     }
 }

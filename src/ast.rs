@@ -4,10 +4,10 @@
 //! They are serializable to JSON via serde.
 
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// A bash command - the top-level AST node
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Command {
     /// Simple command: `cmd arg1 arg2`
@@ -26,7 +26,7 @@ pub enum Command {
         line: Option<u32>,
         commands: Vec<Self>,
         /// True if pipeline is negated with !
-        #[serde(skip_serializing_if = "std::ops::Not::not")]
+        #[serde(skip_serializing_if = "std::ops::Not::not", default)]
         negated: bool,
     },
 
@@ -152,12 +152,12 @@ pub enum Command {
 }
 
 /// A word in a command
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Word {
     /// The word text
     pub word: String,
     /// Word flags (`W_HASDOLLAR`, `W_QUOTED`, etc.)
-    #[serde(skip_serializing_if = "is_zero")]
+    #[serde(skip_serializing_if = "is_zero", default)]
     pub flags: u32,
 }
 
@@ -168,7 +168,7 @@ const fn is_zero(n: &u32) -> bool {
 }
 
 /// List operator connecting commands
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ListOp {
     /// `&&` - AND list
@@ -184,7 +184,7 @@ pub enum ListOp {
 }
 
 /// A case clause in a case statement
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CaseClause {
     /// Patterns to match
     pub patterns: Vec<String>,
@@ -196,18 +196,18 @@ pub struct CaseClause {
 }
 
 /// Flags for case clause behavior
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CaseClauseFlags {
     /// `;&` - fallthrough to next clause
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    #[serde(skip_serializing_if = "std::ops::Not::not", default)]
     pub fallthrough: bool,
     /// `;;&` - test next pattern
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    #[serde(skip_serializing_if = "std::ops::Not::not", default)]
     pub test_next: bool,
 }
 
 /// A redirect operation
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Redirect {
     /// The type of redirection
     pub direction: RedirectType,
@@ -222,7 +222,7 @@ pub struct Redirect {
 }
 
 /// Redirect direction/type
-#[derive(Debug, Clone, Copy, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum RedirectType {
     /// `<` - input redirection
@@ -256,7 +256,7 @@ pub enum RedirectType {
 }
 
 /// Target of a redirect
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum RedirectTarget {
     /// A filename
@@ -266,7 +266,7 @@ pub enum RedirectTarget {
 }
 
 /// Conditional expression for [[ ... ]]
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "cond_type", rename_all = "snake_case")]
 pub enum ConditionalExpr {
     /// `[[ -flag arg ]]` - unary test

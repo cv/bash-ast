@@ -1,16 +1,17 @@
 # bash-ast
 
-Parse bash scripts to JSON AST using GNU Bash's actual parser.
+Parse bash scripts to JSON AST using GNU Bash's actual parser, and convert AST back to bash.
 
 ## Overview
 
-`bash-ast` is a Rust tool that uses FFI bindings to GNU Bash's parser to convert bash scripts into JSON AST output. This provides 100% compatibility with bash syntax since it uses bash's own parser.
+`bash-ast` is a Rust tool that uses FFI bindings to GNU Bash's parser to convert bash scripts into JSON AST output, and can also convert AST back to executable bash code. This provides 100% compatibility with bash syntax since it uses bash's own parser.
 
 ## Features
 
 - **100% bash compatibility**: Uses the actual GNU Bash parser via FFI
 - **JSON output**: Serializes the AST to JSON for easy consumption
-- **All bash constructs**: Supports all 15 bash command types including:
+- **Round-trip support**: Convert AST back to bash with `--to-bash`
+- **All bash constructs**: Supports all 16 bash command types including:
   - Simple commands (`cmd arg1 arg2`)
   - Pipelines (`cmd1 | cmd2`)
   - Lists (`cmd1 && cmd2`, `cmd1 || cmd2`, `cmd1 ; cmd2`, `cmd1 &`)
@@ -91,7 +92,7 @@ cargo build --release
 ### CLI
 
 ```bash
-# Parse a script file
+# Parse a script file to JSON AST
 ./target/release/bash-ast < script.sh
 
 # Parse inline
@@ -99,12 +100,18 @@ echo 'for i in a b c; do echo $i; done' | ./target/release/bash-ast
 
 # Pretty print with jq
 ./target/release/bash-ast < script.sh | jq .
+
+# Convert JSON AST back to bash
+./target/release/bash-ast script.sh | ./target/release/bash-ast --to-bash
+
+# Round-trip: parse and regenerate
+echo 'for i in a b c; do echo $i; done' | ./target/release/bash-ast | ./target/release/bash-ast -b
 ```
 
 ### Library
 
 ```rust
-use bash_ast::{init, parse, Command};
+use bash_ast::{init, parse, to_bash, Command};
 
 fn main() {
     // Initialize bash (call once at startup)
@@ -114,11 +121,15 @@ fn main() {
     let cmd = parse("echo hello world").unwrap();
 
     // Work with the AST
-    if let Command::Simple { words, .. } = cmd {
+    if let Command::Simple { words, .. } = &cmd {
         for word in words {
             println!("Word: {}", word.word);
         }
     }
+
+    // Convert AST back to bash
+    let script = to_bash(&cmd);
+    println!("Regenerated: {}", script);
 
     // Or get JSON directly
     let json = bash_ast::parse_to_json("echo hello", true).unwrap();
@@ -200,10 +211,13 @@ Tests are automatically configured to run single-threaded via `.cargo/config.tom
 │                                                             │
 │   stdin (script) ──► FFI to bash ──► AST ──► JSON stdout   │
 │                                                             │
+│   stdin (JSON)   ──► serde parse  ──► AST ──► bash stdout  │
+│                                                             │
 │   - bindgen-generated FFI bindings to bash                  │
 │   - Calls parse_string_to_command() via FFI                 │
 │   - Walks C AST, converts to Rust types                     │
 │   - Serializes to JSON with serde                           │
+│   - Regenerates bash from AST with to_bash()                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
