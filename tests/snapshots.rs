@@ -54,11 +54,14 @@ fn test_snapshots() {
         };
 
         if expected_path.exists() {
-            // Compare against expected
+            // Compare against expected (normalize to ignore line number differences across platforms)
             let expected_json = fs::read_to_string(&expected_path)
                 .unwrap_or_else(|e| panic!("Failed to read {expected_path:?}: {e}"));
 
-            if actual_json.trim() != expected_json.trim() {
+            let actual_normalized = normalize_json_for_comparison(&actual_json);
+            let expected_normalized = normalize_json_for_comparison(&expected_json);
+
+            if actual_normalized != expected_normalized {
                 failures.push(format!(
                     "{}: output mismatch\n--- expected ---\n{}\n--- actual ---\n{}",
                     script_name,
