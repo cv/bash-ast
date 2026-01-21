@@ -44,7 +44,9 @@ fn write_command(cmd: &Command, out: &mut String) {
         } => {
             write_pipeline(commands, *negated, out);
         }
-        Command::List { op, left, right, .. } => {
+        Command::List {
+            op, left, right, ..
+        } => {
             write_list(op, left, right, out);
         }
         Command::For {
@@ -170,7 +172,7 @@ fn write_redirect(redirect: &Redirect, out: &mut String) {
             return;
         }
         RedirectType::Close => {
-            // N>&- or N<&- format  
+            // N>&- or N<&- format
             if let Some(fd) = redirect.source_fd {
                 out.push_str(&fd.to_string());
             }
@@ -315,10 +317,16 @@ fn write_if(
     write_command(condition, out);
     out.push_str("; then ");
     write_command(then_branch, out);
-    
+
     if let Some(else_cmd) = else_branch {
         // Check if it's an elif (nested if in else)
-        if let Command::If { condition: elif_cond, then_branch: elif_then, else_branch: elif_else, .. } = else_cmd.as_ref() {
+        if let Command::If {
+            condition: elif_cond,
+            then_branch: elif_then,
+            else_branch: elif_else,
+            ..
+        } = else_cmd.as_ref()
+        {
             out.push_str("; elif ");
             write_command(elif_cond, out);
             out.push_str("; then ");
@@ -332,13 +340,19 @@ fn write_if(
             write_command(else_cmd, out);
         }
     }
-    
+
     out.push_str("; fi");
 }
 
 /// Helper to write elif/else chains
 fn write_else_chain(cmd: &Command, out: &mut String) {
-    if let Command::If { condition, then_branch, else_branch, .. } = cmd {
+    if let Command::If {
+        condition,
+        then_branch,
+        else_branch,
+        ..
+    } = cmd
+    {
         out.push_str("; elif ");
         write_command(condition, out);
         out.push_str("; then ");
@@ -357,7 +371,7 @@ fn write_case(word: &str, clauses: &[CaseClause], out: &mut String) {
     out.push_str("case ");
     out.push_str(word);
     out.push_str(" in ");
-    
+
     for clause in clauses {
         // Write patterns
         for (i, pattern) in clause.patterns.iter().enumerate() {
@@ -367,12 +381,12 @@ fn write_case(word: &str, clauses: &[CaseClause], out: &mut String) {
             out.push_str(pattern);
         }
         out.push_str(") ");
-        
+
         // Write action
         if let Some(action) = &clause.action {
             write_command(action, out);
         }
-        
+
         // Write terminator
         if let Some(flags) = &clause.flags {
             if flags.fallthrough {
@@ -387,7 +401,7 @@ fn write_case(word: &str, clauses: &[CaseClause], out: &mut String) {
         }
         out.push(' ');
     }
-    
+
     out.push_str("esac");
 }
 
@@ -502,7 +516,7 @@ fn write_coproc(name: Option<&str>, body: &Command, out: &mut String) {
     // When body is a simple command and name is COPROC, bash auto-generates the name
     let is_default_name = name == Some("COPROC");
     let is_simple_body = matches!(body, Command::Simple { .. });
-    
+
     if let Some(n) = name {
         // Only write the name explicitly if it's not the default or the body is a group
         if !is_default_name || !is_simple_body {
@@ -531,28 +545,28 @@ mod tests {
             "Failed to parse regenerated script: {}\nOriginal: {}",
             regenerated, script
         ));
-        
+
         // Compare JSON representations (ignoring line numbers)
         let json1 = serde_json::to_string(&ast1).unwrap();
         let json2 = serde_json::to_string(&ast2).unwrap();
-        
+
         // Remove line numbers for comparison
         let json1_no_lines = remove_line_numbers(&json1);
         let json2_no_lines = remove_line_numbers(&json2);
-        
+
         assert_eq!(
             json1_no_lines, json2_no_lines,
             "AST mismatch!\nOriginal: {}\nRegenerated: {}\nAST1: {}\nAST2: {}",
             script, regenerated, json1, json2
         );
     }
-    
+
     /// Remove line numbers from JSON for comparison
     fn remove_line_numbers(json: &str) -> String {
         // Simple regex-like removal of "line":N patterns
         let mut result = String::new();
         let mut chars = json.chars().peekable();
-        
+
         while let Some(c) = chars.next() {
             if c == '"' {
                 result.push(c);
@@ -567,7 +581,7 @@ mod tests {
                     }
                     key.push(nc);
                 }
-                
+
                 // Check if it's "line"
                 if key == "line" {
                     // Skip :N, or :null
@@ -589,7 +603,7 @@ mod tests {
                 result.push(c);
             }
         }
-        
+
         result
     }
 
