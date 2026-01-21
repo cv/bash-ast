@@ -183,10 +183,52 @@ fn write_simple(
 }
 
 /// Write multiple redirects
+/// Heredocs are handled specially - their content comes after all other redirects
 fn write_redirects(redirects: &[Redirect], out: &mut String) {
+    // First pass: write non-heredoc redirects
     for redirect in redirects {
-        out.push(' ');
-        write_redirect(redirect, out);
+        if redirect.direction != RedirectType::HereDoc {
+            out.push(' ');
+            write_redirect(redirect, out);
+        }
+    }
+    // Second pass: write heredoc markers (<<EOF)
+    for redirect in redirects {
+        if redirect.direction == RedirectType::HereDoc {
+            out.push(' ');
+            write_heredoc_marker(redirect, out);
+        }
+    }
+    // Third pass: write heredoc content (after a newline)
+    for redirect in redirects {
+        if redirect.direction == RedirectType::HereDoc {
+            out.push('\n');
+            write_heredoc_content(redirect, out);
+        }
+    }
+}
+
+/// Write just the heredoc marker (<<EOF)
+fn write_heredoc_marker(redirect: &Redirect, out: &mut String) {
+    if let Some(fd) = redirect.source_fd {
+        if fd != 0 {
+            out.push_str(&fd.to_string());
+        }
+    }
+    out.push_str("<<");
+    let eof = redirect.here_doc_eof.as_deref().unwrap_or("EOF");
+    out.push_str(eof);
+}
+
+/// Write heredoc content and closing delimiter
+fn write_heredoc_content(redirect: &Redirect, out: &mut String) {
+    let eof = redirect.here_doc_eof.as_deref().unwrap_or("EOF");
+    if let RedirectTarget::File(content) = &redirect.target {
+        out.push_str(content);
+        if !content.ends_with('\n') {
+            out.push('\n');
+        }
+        out.push_str(eof);
     }
 }
 
@@ -195,24 +237,8 @@ fn write_redirect(redirect: &Redirect, out: &mut String) {
     // Handle special cases that have their own format
     match redirect.direction {
         RedirectType::HereDoc => {
-            // <<EOF\ncontent\nEOF format
-            if let Some(fd) = redirect.source_fd {
-                if fd != 0 {
-                    out.push_str(&fd.to_string());
-                }
-            }
-            out.push_str("<<");
-            let eof = redirect.here_doc_eof.as_deref().unwrap_or("EOF");
-            out.push_str(eof);
-            if let RedirectTarget::File(content) = &redirect.target {
-                out.push('\n');
-                out.push_str(content);
-                if !content.ends_with('\n') {
-                    out.push('\n');
-                }
-                out.push_str(eof);
-            }
-            return;
+            // Heredocs are handled by write_redirects
+            unreachable!("Heredocs should be handled by write_redirects");
         }
         RedirectType::Close => {
             // N>&- or N<&- format
@@ -270,6 +296,11 @@ fn write_redirect(redirect: &Redirect, out: &mut String) {
     // Write target
     match &redirect.target {
         RedirectTarget::File(filename) => {
+            // Add space if target starts with < or > to avoid confusion with heredocs
+            // e.g., "< <(cmd)" not "<<(cmd)"
+            if filename.starts_with('<') || filename.starts_with('>') {
+                out.push(' ');
+            }
             out.push_str(filename);
         }
         RedirectTarget::Fd(fd) => {
@@ -302,15 +333,48 @@ fn write_pipeline(commands: &[Command], negated: bool, out: &mut String) {
 fn write_list(op: ListOp, left: &Command, right: &Command, out: &mut String) {
     write_command(left, out);
 
+    // Check if right side is empty (e.g., "cmd &" has empty right side)
+    let right_is_empty = matches!(
+        right,
+        Command::Simple { words, redirects, assignments, .. }
+        if words.is_empty() && redirects.is_empty() && assignments.is_none()
+    );
+
     match op {
         ListOp::And => out.push_str(" && "),
         ListOp::Or => out.push_str(" || "),
         ListOp::Semi => out.push_str("; "),
-        ListOp::Amp => out.push_str(" & "),
+        ListOp::Amp => {
+            out.push_str(" &");
+            if !right_is_empty {
+                out.push(' ');
+            }
+        }
         ListOp::Newline => out.push('\n'),
     }
 
-    write_command(right, out);
+    if !right_is_empty {
+        write_command(right, out);
+    }
+}
+
+/// Check if a command ends with a background operator (needs no semicolon after)
+fn ends_with_background(cmd: &Command) -> bool {
+    match cmd {
+        Command::List {
+            op: ListOp::Amp,
+            right,
+            ..
+        } => {
+            // Check if right is empty (pure background) or also ends with &
+            matches!(
+                right.as_ref(),
+                Command::Simple { words, redirects, assignments, .. }
+                if words.is_empty() && redirects.is_empty() && assignments.is_none()
+            ) || ends_with_background(right)
+        }
+        _ => false,
+    }
 }
 
 /// Write a for loop
@@ -332,7 +396,11 @@ fn write_for(
     }
     out.push_str("; do ");
     write_command(body, out);
-    out.push_str("; done");
+    if ends_with_background(body) {
+        out.push_str(" done");
+    } else {
+        out.push_str("; done");
+    }
     write_redirects(redirects, out);
 }
 
@@ -342,7 +410,11 @@ fn write_while(test: &Command, body: &Command, redirects: &[Redirect], out: &mut
     write_command(test, out);
     out.push_str("; do ");
     write_command(body, out);
-    out.push_str("; done");
+    if ends_with_background(body) {
+        out.push_str(" done");
+    } else {
+        out.push_str("; done");
+    }
     write_redirects(redirects, out);
 }
 
@@ -352,7 +424,11 @@ fn write_until(test: &Command, body: &Command, redirects: &[Redirect], out: &mut
     write_command(test, out);
     out.push_str("; do ");
     write_command(body, out);
-    out.push_str("; done");
+    if ends_with_background(body) {
+        out.push_str(" done");
+    } else {
+        out.push_str("; done");
+    }
     write_redirects(redirects, out);
 }
 
@@ -477,7 +553,11 @@ fn write_select(
     }
     out.push_str("; do ");
     write_command(body, out);
-    out.push_str("; done");
+    if ends_with_background(body) {
+        out.push_str(" done");
+    } else {
+        out.push_str("; done");
+    }
     write_redirects(redirects, out);
 }
 
