@@ -349,11 +349,40 @@ fn write_pipeline(commands: &[Command], negated: bool, out: &mut String) {
 }
 
 /// Get the line number of the first token in a command
-const fn get_command_line(cmd: &Command) -> Option<u32> {
+/// Get the first line number of a command (for determining where it starts)
+fn get_first_line(cmd: &Command) -> Option<u32> {
     match cmd {
+        Command::List { left, line, .. } => {
+            // For lists, recurse into left to find the first command
+            get_first_line(left).or(*line)
+        }
         Command::Simple { line, .. }
         | Command::Pipeline { line, .. }
-        | Command::List { line, .. }
+        | Command::For { line, .. }
+        | Command::While { line, .. }
+        | Command::Until { line, .. }
+        | Command::If { line, .. }
+        | Command::Case { line, .. }
+        | Command::Select { line, .. }
+        | Command::Group { line, .. }
+        | Command::Subshell { line, .. }
+        | Command::FunctionDef { line, .. }
+        | Command::Arithmetic { line, .. }
+        | Command::ArithmeticFor { line, .. }
+        | Command::Conditional { line, .. }
+        | Command::Coproc { line, .. } => *line,
+    }
+}
+
+/// Get the last line number of a command (for determining where it ends)
+fn get_last_line(cmd: &Command) -> Option<u32> {
+    match cmd {
+        Command::List { right, line, .. } => {
+            // For lists, recurse into right to find the last command
+            get_last_line(right).or(*line)
+        }
+        Command::Simple { line, .. }
+        | Command::Pipeline { line, .. }
         | Command::For { line, .. }
         | Command::While { line, .. }
         | Command::Until { line, .. }
@@ -458,7 +487,7 @@ fn write_list(op: ListOp, left: &Command, right: &Command, out: &mut String) {
     // 2. Left command has a heredoc (heredoc content requires newline after delimiter)
     let use_newline = op == ListOp::Semi
         && (left_has_heredoc
-            || match (get_command_line(left), get_command_line(right)) {
+            || match (get_last_line(left), get_first_line(right)) {
                 (Some(l), Some(r)) => r > l,
                 _ => false,
             });
