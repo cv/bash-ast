@@ -349,79 +349,33 @@ fn write_pipeline(commands: &[Command], negated: bool, out: &mut String) {
 }
 
 /// Get the line number of the first token in a command
-/// Get the first line number of a command (for determining where it starts)
+/// Get the first line number of a command (for determining where it starts).
+/// For List nodes, recurses into the left child to find the actual first command.
 fn get_first_line(cmd: &Command) -> Option<u32> {
     match cmd {
-        Command::List { left, line, .. } => {
-            // For lists, recurse into left to find the first command
-            get_first_line(left).or(*line)
-        }
-        Command::Simple { line, .. }
-        | Command::Pipeline { line, .. }
-        | Command::For { line, .. }
-        | Command::While { line, .. }
-        | Command::Until { line, .. }
-        | Command::If { line, .. }
-        | Command::Case { line, .. }
-        | Command::Select { line, .. }
-        | Command::Group { line, .. }
-        | Command::Subshell { line, .. }
-        | Command::FunctionDef { line, .. }
-        | Command::Arithmetic { line, .. }
-        | Command::ArithmeticFor { line, .. }
-        | Command::Conditional { line, .. }
-        | Command::Coproc { line, .. } => *line,
+        Command::List { left, .. } => get_first_line(left),
+        _ => cmd.line(),
     }
 }
 
-/// Get the last line number of a command (for determining where it ends)
+/// Get the last line number of a command (for determining where it ends).
+/// For List nodes, recurses into the right child to find the actual last command.
 fn get_last_line(cmd: &Command) -> Option<u32> {
     match cmd {
-        Command::List { right, line, .. } => {
-            // For lists, recurse into right to find the last command
-            get_last_line(right).or(*line)
-        }
-        Command::Simple { line, .. }
-        | Command::Pipeline { line, .. }
-        | Command::For { line, .. }
-        | Command::While { line, .. }
-        | Command::Until { line, .. }
-        | Command::If { line, .. }
-        | Command::Case { line, .. }
-        | Command::Select { line, .. }
-        | Command::Group { line, .. }
-        | Command::Subshell { line, .. }
-        | Command::FunctionDef { line, .. }
-        | Command::Arithmetic { line, .. }
-        | Command::ArithmeticFor { line, .. }
-        | Command::Conditional { line, .. }
-        | Command::Coproc { line, .. } => *line,
+        Command::List { right, .. } => get_last_line(right),
+        _ => cmd.line(),
     }
 }
 
 /// Check if a command has any heredoc redirects (requires newline after)
 fn has_heredoc(cmd: &Command) -> bool {
-    let redirects = match cmd {
-        Command::Simple { redirects, .. }
-        | Command::For { redirects, .. }
-        | Command::While { redirects, .. }
-        | Command::Until { redirects, .. }
-        | Command::If { redirects, .. }
-        | Command::Case { redirects, .. }
-        | Command::Select { redirects, .. }
-        | Command::Group { redirects, .. }
-        | Command::Subshell { redirects, .. } => redirects,
-        Command::List { left, right, .. } => {
-            return has_heredoc(left) || has_heredoc(right);
-        }
-        Command::Pipeline { commands, .. } => {
-            return commands.iter().any(has_heredoc);
-        }
-        _ => return false,
-    };
-    redirects
-        .iter()
-        .any(|r| r.direction == RedirectType::HereDoc)
+    match cmd {
+        Command::List { left, right, .. } => has_heredoc(left) || has_heredoc(right),
+        Command::Pipeline { commands, .. } => commands.iter().any(has_heredoc),
+        _ => cmd
+            .redirects()
+            .is_some_and(|r| r.iter().any(|r| r.direction == RedirectType::HereDoc)),
+    }
 }
 
 /// Collect all heredocs from a command tree
@@ -433,21 +387,6 @@ fn collect_heredocs(cmd: &Command) -> Vec<&Redirect> {
 
 fn collect_heredocs_impl<'a>(cmd: &'a Command, heredocs: &mut Vec<&'a Redirect>) {
     match cmd {
-        Command::Simple { redirects, .. }
-        | Command::For { redirects, .. }
-        | Command::While { redirects, .. }
-        | Command::Until { redirects, .. }
-        | Command::If { redirects, .. }
-        | Command::Case { redirects, .. }
-        | Command::Select { redirects, .. }
-        | Command::Group { redirects, .. }
-        | Command::Subshell { redirects, .. } => {
-            for r in redirects {
-                if r.direction == RedirectType::HereDoc {
-                    heredocs.push(r);
-                }
-            }
-        }
         Command::List { left, right, .. } => {
             collect_heredocs_impl(left, heredocs);
             collect_heredocs_impl(right, heredocs);
@@ -457,7 +396,15 @@ fn collect_heredocs_impl<'a>(cmd: &'a Command, heredocs: &mut Vec<&'a Redirect>)
                 collect_heredocs_impl(c, heredocs);
             }
         }
-        _ => {}
+        _ => {
+            if let Some(redirects) = cmd.redirects() {
+                for r in redirects {
+                    if r.direction == RedirectType::HereDoc {
+                        heredocs.push(r);
+                    }
+                }
+            }
+        }
     }
 }
 

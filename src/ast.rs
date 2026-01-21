@@ -328,4 +328,22 @@ impl Command {
             | Self::Coproc { line, .. } => *line,
         }
     }
+
+    /// Get the redirects for this command, if it has any.
+    /// Returns `None` for command types that don't support redirects directly.
+    #[must_use]
+    pub const fn redirects(&self) -> Option<&Vec<Redirect>> {
+        match self {
+            Self::Simple { redirects, .. }
+            | Self::For { redirects, .. }
+            | Self::While { redirects, .. }
+            | Self::Until { redirects, .. }
+            | Self::If { redirects, .. }
+            | Self::Case { redirects, .. }
+            | Self::Select { redirects, .. }
+            | Self::Group { redirects, .. }
+            | Self::Subshell { redirects, .. } => Some(redirects),
+            _ => None,
+        }
+    }
 }

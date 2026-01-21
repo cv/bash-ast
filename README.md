@@ -150,7 +150,6 @@ Output:
 ```json
 {
   "type": "pipeline",
-  "line": 1,
   "commands": [
     {
       "type": "for",
@@ -162,7 +161,7 @@ Output:
         "line": 2,
         "words": [
           { "word": "echo" },
-          { "word": "$i" }
+          { "word": "$i", "flags": 1 }
         ],
         "redirects": []
       }
@@ -179,6 +178,8 @@ Output:
   ]
 }
 ```
+
+Note: The `flags` field on words indicates special expansion handling (e.g., `flags: 1` means the word contains a variable expansion).
 
 ## Error Handling
 
