@@ -2,7 +2,7 @@
 #
 # Common targets for development, testing, and CI
 
-.PHONY: help all build test lint clean coverage fuzz bench
+.PHONY: help all build test lint clean coverage fuzz bench setup-hooks
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -77,3 +77,9 @@ check: ## Quick check (fast feedback loop)
 
 ci: lint test ## Full CI pipeline
 	@echo "CI checks passed!"
+
+setup-hooks: ## Install pre-commit hooks using prek
+	@command -v prek >/dev/null 2>&1 || { echo "prek not found. Install with: brew install j178/tap/prek"; exit 1; }
+	prek install
+	prek install --hook-type pre-push
+	@echo "Git hooks installed! Hooks will run on commit (fmt, clippy) and push (tests)."
