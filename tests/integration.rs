@@ -3,7 +3,7 @@
 //! These tests verify that the parser correctly handles various bash constructs.
 //!
 //! NOTE: These tests MUST run single-threaded because bash's parser uses global
-//! state. This is enforced via .cargo/config.toml setting RUST_TEST_THREADS=1.
+//! state. This is enforced via .cargo/config.toml setting `RUST_TEST_THREADS=1`.
 
 use bash_ast::{
     init, parse, parse_to_json, Command, ConditionalExpr, ListOp, ParseError, MAX_SCRIPT_SIZE,
@@ -22,20 +22,20 @@ fn setup() {
 /// Helper to parse and unwrap, with better error messages
 fn parse_ok(script: &str) -> Command {
     setup();
-    parse(script).unwrap_or_else(|e| panic!("Failed to parse {:?}: {}", script, e))
+    parse(script).unwrap_or_else(|e| panic!("Failed to parse {script:?}: {e}"))
 }
 
 /// Helper to assert parsing fails with expected error
 fn parse_err(script: &str) -> ParseError {
     setup();
-    parse(script).expect_err(&format!("Expected parse error for {:?}", script))
+    parse(script).expect_err(&format!("Expected parse error for {script:?}"))
 }
 
 /// Extract words from a Simple command
 fn simple_words(cmd: &Command) -> Vec<&str> {
     match cmd {
         Command::Simple { words, .. } => words.iter().map(|w| w.word.as_str()).collect(),
-        _ => panic!("Expected Simple command, got {:?}", cmd),
+        _ => panic!("Expected Simple command, got {cmd:?}"),
     }
 }
 
@@ -51,7 +51,7 @@ fn assert_has_redirects(cmd: &Command) {
         Command::Simple { redirects, .. } => {
             assert!(!redirects.is_empty(), "Expected redirects, got none");
         }
-        _ => panic!("Expected Simple command, got {:?}", cmd),
+        _ => panic!("Expected Simple command, got {cmd:?}"),
     }
 }
 
@@ -109,8 +109,7 @@ fn test_pipelines() {
         let cmd = parse_ok(script);
         assert!(
             assert_pipeline(&cmd, *expected_stages),
-            "Expected Pipeline for {:?}",
-            script
+            "Expected Pipeline for {script:?}"
         );
     }
 }
@@ -119,9 +118,11 @@ fn test_pipelines() {
 // Lists (&&, ||, ;, &)
 // ============================================================================
 
+type ListOpChecker = fn(&ListOp) -> bool;
+
 #[test]
 fn test_list_operators() {
-    let cases: &[(&str, fn(&ListOp) -> bool)] = &[
+    let cases: &[(&str, ListOpChecker)] = &[
         ("cmd1 && cmd2", |op| matches!(op, ListOp::And)),
         ("cmd1 || cmd2", |op| matches!(op, ListOp::Or)),
         ("cmd1 ; cmd2", |op| matches!(op, ListOp::Semi)),
@@ -131,9 +132,9 @@ fn test_list_operators() {
     for (script, check_op) in cases {
         let cmd = parse_ok(script);
         if let Command::List { op, .. } = cmd {
-            assert!(check_op(&op), "Wrong operator for {:?}", script);
+            assert!(check_op(&op), "Wrong operator for {script:?}");
         } else {
-            panic!("Expected List command for {:?}", script);
+            panic!("Expected List command for {script:?}");
         }
     }
 }
@@ -350,7 +351,7 @@ fn test_functions() {
 fn test_arithmetic() {
     let cmd = parse_ok("(( x = 1 + 2 ))");
     if let Command::Arithmetic { expression, .. } = cmd {
-        assert!(expression.contains("1") && expression.contains("2"));
+        assert!(expression.contains('1') && expression.contains('2'));
     } else {
         panic!("Expected Arithmetic command");
     }
@@ -363,9 +364,9 @@ fn test_arithmetic_for() {
         init, test, step, ..
     } = cmd
     {
-        assert!(init.contains("0") || init.contains("i"));
-        assert!(test.contains("10") || test.contains("i"));
-        assert!(step.contains("++") || step.contains("i"));
+        assert!(init.contains('0') || init.contains('i'));
+        assert!(test.contains("10") || test.contains('i'));
+        assert!(step.contains("++") || step.contains('i'));
     } else {
         panic!("Expected ArithmeticFor command");
     }
@@ -375,7 +376,7 @@ fn test_arithmetic_for() {
 fn test_arithmetic_complex() {
     let cmd = parse_ok("(( result = (a + b) * c / d ))");
     if let Command::Arithmetic { expression, .. } = cmd {
-        assert!(expression.contains("result") || expression.contains("a"));
+        assert!(expression.contains("result") || expression.contains('a'));
     } else {
         panic!("Expected Arithmetic command");
     }
@@ -388,9 +389,9 @@ fn test_arithmetic_for_complex() {
         init, test, step, ..
     } = cmd
     {
-        assert!(init.contains("i") || init.contains("j"));
-        assert!(test.contains("i") || test.contains("j"));
-        assert!(step.contains("i") || step.contains("j"));
+        assert!(init.contains('i') || init.contains('j'));
+        assert!(test.contains('i') || test.contains('j'));
+        assert!(step.contains('i') || step.contains('j'));
     } else {
         panic!("Expected ArithmeticFor command");
     }
@@ -632,14 +633,11 @@ fn test_command_line_method() {
         let cmd = parse_ok(script);
         // Verify the method is callable and command type matches
         let _ = cmd.line();
-        let debug_str = format!("{:?}", cmd);
+        let debug_str = format!("{cmd:?}");
         let actual_type = debug_str.split_whitespace().next().unwrap();
         assert!(
             actual_type.contains(expected_type),
-            "Expected {} for {:?}, got {}",
-            expected_type,
-            script,
-            actual_type
+            "Expected {expected_type} for {script:?}, got {actual_type}"
         );
     }
 }
@@ -685,10 +683,10 @@ fn test_unicode() {
 #[test]
 fn test_special_characters() {
     let cases = [
-        r#"echo $$ $! $? $# $@ $*"#,
+        r"echo $$ $! $? $# $@ $*",
         "echo `whoami`",
         "echo $(date)",
-        r#"echo $((1 + 2 * 3))"#,
+        r"echo $((1 + 2 * 3))",
         "diff <(ls dir1) <(ls dir2)",
         "echo {a,b,c}",
         "arr=(one two three)",
@@ -750,7 +748,7 @@ proptest! {
 
     #[test]
     fn prop_echo_parses(word in "[a-zA-Z][a-zA-Z0-9_]{0,20}") {
-        let script = format!("echo {}", word);
+        let script = format!("echo {word}");
         let cmd = parse_ok(&script);
         assert!(matches!(cmd, Command::Simple { .. }));
     }
@@ -777,7 +775,7 @@ proptest! {
             "{ ".repeat(depth),
             "} ".repeat(depth).trim()
         );
-        assert!(parse(&script).is_ok(), "Failed to parse nested groups depth {}: {}", depth, script);
+        assert!(parse(&script).is_ok(), "Failed to parse nested groups depth {depth}: {script}");
     }
 
     #[test]
@@ -789,7 +787,7 @@ proptest! {
 
     #[test]
     fn prop_null_bytes_rejected(prefix in "[a-z]{0,10}", suffix in "[a-z]{0,10}") {
-        let script = format!("{}\0{}", prefix, suffix);
+        let script = format!("{prefix}\0{suffix}");
         let err = parse_err(&script);
         assert!(matches!(err, ParseError::InvalidString(_)));
     }
