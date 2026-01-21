@@ -11,21 +11,21 @@ fn setup() {
 
 fn parse_ok(script: &str) -> Command {
     setup();
-    parse(script).unwrap_or_else(|e| panic!("Failed to parse {:?}: {}", script, e))
+    parse(script).unwrap_or_else(|e| panic!("Failed to parse {script:?}: {e}"))
 }
 
 /// Helper to check if a command has redirects
-fn get_redirects(cmd: &Command) -> Option<&Vec<Redirect>> {
+const fn get_redirects(cmd: &Command) -> Option<&Vec<Redirect>> {
     match cmd {
-        Command::While { redirects, .. } => Some(redirects),
-        Command::Until { redirects, .. } => Some(redirects),
-        Command::For { redirects, .. } => Some(redirects),
-        Command::If { redirects, .. } => Some(redirects),
-        Command::Case { redirects, .. } => Some(redirects),
-        Command::Select { redirects, .. } => Some(redirects),
-        Command::Group { redirects, .. } => Some(redirects),
-        Command::Subshell { redirects, .. } => Some(redirects),
-        Command::Simple { redirects, .. } => Some(redirects),
+        Command::While { redirects, .. }
+        | Command::Until { redirects, .. }
+        | Command::For { redirects, .. }
+        | Command::If { redirects, .. }
+        | Command::Case { redirects, .. }
+        | Command::Select { redirects, .. }
+        | Command::Group { redirects, .. }
+        | Command::Subshell { redirects, .. }
+        | Command::Simple { redirects, .. } => Some(redirects),
         _ => None,
     }
 }
@@ -34,12 +34,7 @@ fn get_redirects(cmd: &Command) -> Option<&Vec<Redirect>> {
 fn test_while_with_input_redirect() {
     let cmd = parse_ok("while read line; do echo $line; done < input.txt");
     let redirects = get_redirects(&cmd).expect("While should have redirects field");
-    assert_eq!(
-        redirects.len(),
-        1,
-        "Expected 1 redirect, got {:?}",
-        redirects
-    );
+    assert_eq!(redirects.len(), 1, "Expected 1 redirect, got {redirects:?}");
 }
 
 #[test]
@@ -107,8 +102,7 @@ fn test_while_redirect_roundtrip() {
     let regenerated = to_bash(&ast);
     assert!(
         regenerated.contains("< input.txt") || regenerated.contains("<input.txt"),
-        "Regenerated script should contain redirect: {}",
-        regenerated
+        "Regenerated script should contain redirect: {regenerated}"
     );
 }
 
@@ -120,8 +114,7 @@ fn test_for_redirect_roundtrip() {
     let regenerated = to_bash(&ast);
     assert!(
         regenerated.contains("> output.txt") || regenerated.contains(">output.txt"),
-        "Regenerated script should contain redirect: {}",
-        regenerated
+        "Regenerated script should contain redirect: {regenerated}"
     );
 }
 
@@ -133,8 +126,7 @@ fn test_group_redirect_roundtrip() {
     let regenerated = to_bash(&ast);
     assert!(
         regenerated.contains("> file.txt") || regenerated.contains(">file.txt"),
-        "Regenerated script should contain redirect: {}",
-        regenerated
+        "Regenerated script should contain redirect: {regenerated}"
     );
 }
 
@@ -178,8 +170,7 @@ fn test_negated_roundtrip() {
     let regenerated = to_bash(&ast);
     assert!(
         regenerated.starts_with("! "),
-        "Regenerated should start with '! ': {}",
-        regenerated
+        "Regenerated should start with '! ': {regenerated}"
     );
 }
 
@@ -191,7 +182,6 @@ fn test_negated_pipeline_roundtrip() {
     let regenerated = to_bash(&ast);
     assert!(
         regenerated.starts_with("! "),
-        "Regenerated should start with '! ': {}",
-        regenerated
+        "Regenerated should start with '! ': {regenerated}"
     );
 }

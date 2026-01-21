@@ -29,6 +29,7 @@ pub fn to_bash(cmd: &Command) -> String {
 }
 
 /// Write a command to the output string
+#[allow(clippy::too_many_lines)]
 fn write_command(cmd: &Command, out: &mut String) {
     match cmd {
         Command::Simple {
@@ -47,7 +48,7 @@ fn write_command(cmd: &Command, out: &mut String) {
         Command::List {
             op, left, right, ..
         } => {
-            write_list(op, left, right, out);
+            write_list(*op, left, right, out);
         }
         Command::For {
             variable,
@@ -81,7 +82,13 @@ fn write_command(cmd: &Command, out: &mut String) {
             redirects,
             ..
         } => {
-            write_if(condition, then_branch, else_branch.as_ref(), redirects, out);
+            write_if(
+                condition,
+                then_branch,
+                else_branch.as_deref(),
+                redirects,
+                out,
+            );
         }
         Command::Case {
             word,
@@ -143,15 +150,12 @@ fn write_simple(
 ) {
     // Check if the command is a builtin that takes assignments as arguments
     // (like local, export, declare, readonly, typeset)
-    let is_assignment_builtin = words
-        .first()
-        .map(|w| {
-            matches!(
-                w.word.as_str(),
-                "local" | "export" | "declare" | "readonly" | "typeset"
-            )
-        })
-        .unwrap_or(false);
+    let is_assignment_builtin = words.first().is_some_and(|w| {
+        matches!(
+            w.word.as_str(),
+            "local" | "export" | "declare" | "readonly" | "typeset"
+        )
+    });
 
     if is_assignment_builtin {
         // For assignment builtins: cmd assignments...
@@ -279,12 +283,10 @@ fn write_redirect(redirect: &Redirect, out: &mut String) {
         RedirectType::HereString => out.push_str("<<<"),
         RedirectType::InputOutput => out.push_str("<>"),
         RedirectType::Clobber => out.push_str(">|"),
-        RedirectType::DupInput => out.push_str("<&"),
-        RedirectType::DupOutput => out.push_str(">&"),
+        RedirectType::DupInput | RedirectType::MoveInput => out.push_str("<&"),
+        RedirectType::DupOutput | RedirectType::MoveOutput => out.push_str(">&"),
         RedirectType::ErrAndOut => out.push_str("&>"),
         RedirectType::AppendErrAndOut => out.push_str("&>>"),
-        RedirectType::MoveInput => out.push_str("<&"),
-        RedirectType::MoveOutput => out.push_str(">&"),
         RedirectType::HereDoc | RedirectType::Close => unreachable!(), // Handled above
     }
 
@@ -320,7 +322,7 @@ fn write_pipeline(commands: &[Command], negated: bool, out: &mut String) {
 }
 
 /// Write a list (cmd1 && cmd2, cmd1 || cmd2, etc.)
-fn write_list(op: &ListOp, left: &Command, right: &Command, out: &mut String) {
+fn write_list(op: ListOp, left: &Command, right: &Command, out: &mut String) {
     write_command(left, out);
 
     match op {
@@ -381,7 +383,7 @@ fn write_until(test: &Command, body: &Command, redirects: &[Redirect], out: &mut
 fn write_if(
     condition: &Command,
     then_branch: &Command,
-    else_branch: Option<&Box<Command>>,
+    else_branch: Option<&Command>,
     redirects: &[Redirect],
     out: &mut String,
 ) {
@@ -397,7 +399,7 @@ fn write_if(
             then_branch: elif_then,
             else_branch: elif_else,
             ..
-        } = else_cmd.as_ref()
+        } = else_cmd
         {
             out.push_str("; elif ");
             write_command(elif_cond, out);
@@ -619,15 +621,15 @@ mod tests {
         init();
     }
 
-    /// Helper to test round-trip: parse -> to_bash -> parse -> compare structure
+    /// Helper to test round-trip: parse -> `to_bash` -> parse -> compare structure
     fn assert_round_trip(script: &str) {
         setup();
-        let ast1 = parse(script).expect(&format!("Failed to parse original: {}", script));
+        let ast1 =
+            parse(script).unwrap_or_else(|e| panic!("Failed to parse original: {script}: {e}"));
         let regenerated = to_bash(&ast1);
-        let ast2 = parse(&regenerated).expect(&format!(
-            "Failed to parse regenerated script: {}\nOriginal: {}",
-            regenerated, script
-        ));
+        let ast2 = parse(&regenerated).unwrap_or_else(|e| {
+            panic!("Failed to parse regenerated script: {regenerated}\nOriginal: {script}: {e}")
+        });
 
         // Compare JSON representations (ignoring line numbers)
         let json1 = serde_json::to_string(&ast1).unwrap();
@@ -639,8 +641,7 @@ mod tests {
 
         assert_eq!(
             json1_no_lines, json2_no_lines,
-            "AST mismatch!\nOriginal: {}\nRegenerated: {}\nAST1: {}\nAST2: {}",
-            script, regenerated, json1, json2
+            "AST mismatch!\nOriginal: {script}\nRegenerated: {regenerated}\nAST1: {json1}\nAST2: {json2}"
         );
     }
 
@@ -651,8 +652,8 @@ mod tests {
         let mut chars = json.chars().peekable();
 
         while let Some(c) = chars.next() {
+            result.push(c);
             if c == '"' {
-                result.push(c);
                 // Read the key
                 let mut key = String::new();
                 while let Some(&nc) = chars.peek() {
@@ -682,8 +683,6 @@ mod tests {
                     let line_len = "\"line\"".len();
                     result.truncate(result.len() - line_len);
                 }
-            } else {
-                result.push(c);
             }
         }
 
