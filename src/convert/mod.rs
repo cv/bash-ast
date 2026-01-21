@@ -559,22 +559,25 @@ mod convert_impl {
 
         let cond = &*cond;
 
-        match cond.type_ {
+        // Check if this node is negated (! operator)
+        let negated = (cond.flags & CMD_INVERT_RETURN) != 0;
+
+        let expr = match cond.type_ {
             t if t == COND_AND => {
                 let left = convert_cond_com(cond.left, depth + 1)?;
                 let right = convert_cond_com(cond.right, depth + 1)?;
-                Some(ConditionalExpr::And {
+                ConditionalExpr::And {
                     left: Box::new(left),
                     right: Box::new(right),
-                })
+                }
             }
             t if t == COND_OR => {
                 let left = convert_cond_com(cond.left, depth + 1)?;
                 let right = convert_cond_com(cond.right, depth + 1)?;
-                Some(ConditionalExpr::Or {
+                ConditionalExpr::Or {
                     left: Box::new(left),
                     right: Box::new(right),
-                })
+                }
             }
             t if t == COND_UNARY => {
                 let op = if cond.op.is_null() {
@@ -593,7 +596,7 @@ mod convert_impl {
                         cstr_to_string((*left.op).word)
                     }
                 };
-                Some(ConditionalExpr::Unary { op, arg })
+                ConditionalExpr::Unary { op, arg }
             }
             t if t == COND_BINARY => {
                 let op = if cond.op.is_null() {
@@ -621,7 +624,7 @@ mod convert_impl {
                         cstr_to_string((*right_cond.op).word)
                     }
                 };
-                Some(ConditionalExpr::Binary { op, left, right })
+                ConditionalExpr::Binary { op, left, right }
             }
             t if t == COND_TERM => {
                 let word = if cond.op.is_null() {
@@ -629,15 +632,24 @@ mod convert_impl {
                 } else {
                     cstr_to_string((*cond.op).word)
                 };
-                Some(ConditionalExpr::Term { word })
+                ConditionalExpr::Term { word }
             }
             t if t == COND_EXPR => {
-                let expr = convert_cond_com(cond.left, depth + 1)?;
-                Some(ConditionalExpr::Expr {
-                    expr: Box::new(expr),
-                })
+                let inner = convert_cond_com(cond.left, depth + 1)?;
+                ConditionalExpr::Expr {
+                    expr: Box::new(inner),
+                }
             }
-            _ => None,
+            _ => return None,
+        };
+
+        // Wrap in Not if negated
+        if negated {
+            Some(ConditionalExpr::Not {
+                expr: Box::new(expr),
+            })
+        } else {
+            Some(expr)
         }
     }
 

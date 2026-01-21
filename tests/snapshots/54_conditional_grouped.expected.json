@@ -59,18 +59,21 @@
     "type": "conditional",
     "line": 3,
     "expr": {
-      "cond_type": "expr",
+      "cond_type": "not",
       "expr": {
-        "cond_type": "and",
-        "left": {
-          "cond_type": "unary",
-          "op": "-d",
-          "arg": "dir"
-        },
-        "right": {
-          "cond_type": "unary",
-          "op": "-w",
-          "arg": "dir"
+        "cond_type": "expr",
+        "expr": {
+          "cond_type": "and",
+          "left": {
+            "cond_type": "unary",
+            "op": "-d",
+            "arg": "dir"
+          },
+          "right": {
+            "cond_type": "unary",
+            "op": "-w",
+            "arg": "dir"
+          }
         }
       }
     }

@@ -429,6 +429,59 @@ fn test_conditional_and_or() {
     }
 }
 
+#[test]
+fn test_conditional_negation() {
+    // Simple negation: [[ ! $a ]]
+    let cmd = parse_ok("[[ ! $a ]]");
+    if let Command::Conditional { expr, .. } = cmd {
+        assert!(
+            matches!(expr, ConditionalExpr::Not { .. }),
+            "Expected Not expression, got {expr:?}"
+        );
+    } else {
+        panic!("Expected Conditional command");
+    }
+
+    // Negated unary test: [[ ! -f file ]]
+    let cmd = parse_ok("[[ ! -f /tmp/file ]]");
+    if let Command::Conditional { expr, .. } = cmd {
+        assert!(
+            matches!(expr, ConditionalExpr::Not { .. }),
+            "Expected Not expression, got {expr:?}"
+        );
+        if let ConditionalExpr::Not { expr: inner } = expr {
+            assert!(
+                matches!(*inner, ConditionalExpr::Unary { .. }),
+                "Expected Unary inside Not, got {inner:?}"
+            );
+        }
+    } else {
+        panic!("Expected Conditional command");
+    }
+
+    // Negated binary test: [[ ! $a == $b ]]
+    let cmd = parse_ok("[[ ! $a == $b ]]");
+    if let Command::Conditional { expr, .. } = cmd {
+        assert!(
+            matches!(expr, ConditionalExpr::Not { .. }),
+            "Expected Not expression, got {expr:?}"
+        );
+    } else {
+        panic!("Expected Conditional command");
+    }
+
+    // Negated grouped expression: [[ ! ( -d dir && -w dir ) ]]
+    let cmd = parse_ok("[[ ! ( -d dir && -w dir ) ]]");
+    if let Command::Conditional { expr, .. } = cmd {
+        assert!(
+            matches!(expr, ConditionalExpr::Not { .. }),
+            "Expected Not expression, got {expr:?}"
+        );
+    } else {
+        panic!("Expected Conditional command");
+    }
+}
+
 // ============================================================================
 // Select Statement
 // ============================================================================

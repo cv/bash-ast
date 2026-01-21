@@ -51,9 +51,12 @@
     "expr": {
       "cond_type": "or",
       "left": {
-        "cond_type": "unary",
-        "op": "-d",
-        "arg": "dir"
+        "cond_type": "not",
+        "expr": {
+          "cond_type": "unary",
+          "op": "-d",
+          "arg": "dir"
+        }
       },
       "right": {
         "cond_type": "unary",
