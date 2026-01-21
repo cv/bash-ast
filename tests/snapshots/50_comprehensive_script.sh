@@ -26,7 +26,7 @@ trap 'log ERROR "Interrupted"; exit 130' INT TERM
 load_config() {
     local config_file="${1:?Config file required}"
     [[ -f "$config_file" ]] || { log ERROR "Config not found: $config_file"; return 1; }
-    
+
     while IFS='=' read -r key value; do
         [[ $key =~ ^[[:space:]]*# ]] && continue
         [[ -z "$key" ]] && continue
@@ -36,7 +36,7 @@ load_config() {
 
 process_files() {
     local file
-    
+
     while IFS= read -r -d '' file; do
         if [[ -r "$file" ]] && (( $(wc -l < "$file") > 0 )); then
             case "${file##*.}" in
@@ -47,19 +47,19 @@ process_files() {
             PROCESSED+=("$file")
         fi
     done < <(find "${1:-.}" -type f \( -name "*.txt" -o -name "*.log" \) -print0)
-    
+
     log INFO "Processed ${#PROCESSED[@]} files"
 }
 
 main() {
     log INFO "Starting script with args: $*"
-    
+
     load_config "${CONFIG_FILE:-config.ini}" || exit 1
-    
+
     for dir in "${@:-$PWD}"; do
         [[ -d "$dir" ]] && process_files "$dir"
     done
-    
+
     {
         echo "Summary"
         echo "======="

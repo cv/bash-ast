@@ -72,18 +72,18 @@ extern int parser_state;
  */
 static void ensure_initialized(void) {
     SHELL_VAR *v;
-    
+
     if (parser_lib_initialized) {
         return;
     }
-    
+
     /* Initialize the shell builtins (needed for some parsing operations) */
     initialize_shell_builtins();
-    
+
     /* Create a dummy variable to trigger variable table creation.
      * We use bind_variable which will create the hash tables if needed. */
     bind_variable("_BASH_AST_INIT", "1", 0);
-    
+
     /* Initialize PIPESTATUS array - required for process/command substitution
      * error handling. set_pipestatus_array() is called during parse_comsub
      * on syntax errors, so we need this set up before any parsing. */
@@ -91,11 +91,11 @@ static void ensure_initialized(void) {
     if (v == NULL) {
         v = make_new_array_variable("PIPESTATUS");
     }
-    
-    /* Ensure parser_state starts clean. This is critical because 
+
+    /* Ensure parser_state starts clean. This is critical because
      * parse_string_to_command ORs in flags and expects a clean starting state. */
     parser_state = 0;
-    
+
     parser_lib_initialized = 1;
 }
 
@@ -168,13 +168,13 @@ COMMAND *safe_parse_script(char *string, int flags) {
     char *wrapped;
     size_t len;
     int saved_line_number;
-    
+
     (void)flags;  /* Reserved for future use */
-    
+
     if (string == NULL || *string == '\0') {
         return NULL;
     }
-    
+
     /* Wrap the script in a group { ... } to make it a single compound command.
      * This allows the single-command parser to handle multi-statement scripts.
      * We need a trailing newline before } in case the script ends with a comment.
@@ -187,11 +187,11 @@ COMMAND *safe_parse_script(char *string, int flags) {
     if (wrapped == NULL) {
         return NULL;
     }
-    
+
     strcpy(wrapped, "{ ");
     strcat(wrapped, string);
     strcat(wrapped, "\n}");
-    
+
     /* Initialize line_number so the AST has accurate line information.
      * We start at 0 because shell_getc increments line_number BEFORE reading
      * each line. So after the increment before reading the first line,
@@ -199,14 +199,14 @@ COMMAND *safe_parse_script(char *string, int flags) {
      */
     saved_line_number = line_number;
     line_number = 0;
-    
+
     /* Use the safe single-command parser (ensure_initialized called inside) */
     result = safe_parse_string_to_command(wrapped, 0);
-    
+
     /* Restore line_number in case this is called from within bash */
     line_number = saved_line_number;
-    
+
     free(wrapped);
-    
+
     return result;
 }

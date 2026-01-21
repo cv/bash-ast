@@ -118,13 +118,13 @@ jobs:
           # Extract version number without 'v' prefix for Homebrew
           TAG="${{ steps.release_info.outputs.tag }}"
           VERSION="${TAG#v}"
-          
+
           # Update the formula with the new version and revision
           sed -i \
             -e "s/VERSION_TAG_PLACEHOLDER/${TAG}/" \
             -e "s/REVISION_PLACEHOLDER/${{ steps.release_info.outputs.revision }}/" \
             Formula/bash-ast.rb
-          
+
           echo "Updated formula:"
           cat Formula/bash-ast.rb
 
@@ -139,11 +139,11 @@ jobs:
         run: |
           mkdir -p homebrew-taps/Formula
           cp Formula/bash-ast.rb homebrew-taps/Formula/
-          
+
           cd homebrew-taps
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           git add Formula/bash-ast.rb
           git diff --staged --quiet || git commit -m "bash-ast ${{ steps.release_info.outputs.tag }}"
           git push
