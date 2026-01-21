@@ -29,7 +29,6 @@ pub fn to_bash(cmd: &Command) -> String {
 }
 
 /// Write a command to the output string
-#[allow(clippy::too_many_lines)]
 fn write_command(cmd: &Command, out: &mut String) {
     match cmd {
         Command::Simple {
@@ -42,14 +41,10 @@ fn write_command(cmd: &Command, out: &mut String) {
         }
         Command::Pipeline {
             commands, negated, ..
-        } => {
-            write_pipeline(commands, *negated, out);
-        }
+        } => write_pipeline(commands, *negated, out),
         Command::List {
             op, left, right, ..
-        } => {
-            write_list(*op, left, right, out);
-        }
+        } => write_list(*op, left, right, out),
         Command::For {
             variable,
             words,
@@ -64,17 +59,13 @@ fn write_command(cmd: &Command, out: &mut String) {
             body,
             redirects,
             ..
-        } => {
-            write_while(test, body, redirects, out);
-        }
+        } => write_while(test, body, redirects, out),
         Command::Until {
             test,
             body,
             redirects,
             ..
-        } => {
-            write_until(test, body, redirects, out);
-        }
+        } => write_until(test, body, redirects, out),
         Command::If {
             condition,
             then_branch,
@@ -95,9 +86,7 @@ fn write_command(cmd: &Command, out: &mut String) {
             clauses,
             redirects,
             ..
-        } => {
-            write_case(word, clauses, redirects, out);
-        }
+        } => write_case(word, clauses, redirects, out),
         Command::Select {
             variable,
             words,
@@ -109,20 +98,12 @@ fn write_command(cmd: &Command, out: &mut String) {
         }
         Command::Group {
             body, redirects, ..
-        } => {
-            write_group(body, redirects, out);
-        }
+        } => write_group(body, redirects, out),
         Command::Subshell {
             body, redirects, ..
-        } => {
-            write_subshell(body, redirects, out);
-        }
-        Command::FunctionDef { name, body, .. } => {
-            write_function_def(name, body, out);
-        }
-        Command::Arithmetic { expression, .. } => {
-            write_arithmetic(expression, out);
-        }
+        } => write_subshell(body, redirects, out),
+        Command::FunctionDef { name, body, .. } => write_function_def(name, body, out),
+        Command::Arithmetic { expression, .. } => write_arithmetic(expression, out),
         Command::ArithmeticFor {
             init,
             test,
@@ -132,12 +113,8 @@ fn write_command(cmd: &Command, out: &mut String) {
         } => {
             write_arith_for(init, test, step, body, out);
         }
-        Command::Conditional { expr, .. } => {
-            write_conditional(expr, out);
-        }
-        Command::Coproc { name, body, .. } => {
-            write_coproc(name.as_deref(), body, out);
-        }
+        Command::Conditional { expr, .. } => write_conditional(expr, out),
+        Command::Coproc { name, body, .. } => write_coproc(name.as_deref(), body, out),
     }
 }
 
