@@ -1,0 +1,76 @@
+name: Test musl static build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  musl-build:
+    name: Build static musl binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install musl tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools musl-dev
+
+      - name: Install Rust with musl target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+
+      - name: Build static binary
+        run: |
+          cargo build --release --target x86_64-unknown-linux-musl
+        env:
+          RUSTFLAGS: "-C target-feature=+crt-static"
+
+      - name: Check binary
+        run: |
+          echo "=== File type ==="
+          file target/x86_64-unknown-linux-musl/release/bash-ast
+
+          echo ""
+          echo "=== Dynamic dependencies ==="
+          ldd target/x86_64-unknown-linux-musl/release/bash-ast 2>&1 || echo "(static binary - no dynamic deps)"
+
+          echo ""
+          echo "=== Size ==="
+          ls -lh target/x86_64-unknown-linux-musl/release/bash-ast
+
+          echo ""
+          echo "=== Quick test ==="
+          echo "echo hello world" | target/x86_64-unknown-linux-musl/release/bash-ast
+
+      - name: Test on Alpine (pure musl)
+        run: |
+          docker run --rm -v $PWD:/src alpine sh -c '
+            echo "=== Testing on Alpine (musl) ==="
+            /src/target/x86_64-unknown-linux-musl/release/bash-ast --help || true
+            echo "for i in 1 2 3; do echo \$i; done" | /src/target/x86_64-unknown-linux-musl/release/bash-ast
+          '
+
+      - name: Test on Debian 11 (old glibc)
+        run: |
+          docker run --rm -v $PWD:/src debian:11 sh -c '
+            echo "=== Testing on Debian 11 ==="
+            /src/target/x86_64-unknown-linux-musl/release/bash-ast --help || true
+            echo "if true; then echo yes; fi" | /src/target/x86_64-unknown-linux-musl/release/bash-ast
+          '
+
+      - name: Test on CentOS 7 (very old glibc)
+        run: |
+          docker run --rm -v $PWD:/src centos:7 sh -c '
+            echo "=== Testing on CentOS 7 ==="
+            /src/target/x86_64-unknown-linux-musl/release/bash-ast --help || true
+            echo "echo ancient linux" | /src/target/x86_64-unknown-linux-musl/release/bash-ast
+          '
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bash-ast-musl-static
+          path: target/x86_64-unknown-linux-musl/release/bash-ast
