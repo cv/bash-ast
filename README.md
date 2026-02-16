@@ -159,7 +159,7 @@ echo '{"method":"parse","script":"echo hello"}' | nc -U /tmp/bash-ast.sock
 echo '{"method":"to_bash","ast":{"type":"simple","words":[{"word":"echo"}],"redirects":[]}}' | nc -U /tmp/bash-ast.sock
 # → {"result":"echo"}
 
-# Other methods: schema, ping, shutdown
+# Other methods: schema, ping
 ```
 
 ### Library

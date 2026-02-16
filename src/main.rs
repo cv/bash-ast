@@ -70,7 +70,6 @@ SERVER MODE:
       {"method":"to_bash","ast":{...}}             Convert AST to bash
       {"method":"schema"}                          Get JSON Schema
       {"method":"ping"}                            Health check
-      {"method":"shutdown"}                        Stop the server
 
     Example client (bash):
       echo '{"method":"parse","script":"echo hi"}' | nc -U /tmp/bash-ast.sock

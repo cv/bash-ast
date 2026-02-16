@@ -72,8 +72,6 @@ pub enum Request {
     Schema,
     /// Health check / ping
     Ping,
-    /// Request server shutdown (useful for testing)
-    Shutdown,
 }
 
 impl Request {
@@ -99,12 +97,6 @@ impl Request {
     #[must_use]
     pub const fn is_ping(&self) -> bool {
         matches!(self, Self::Ping)
-    }
-
-    /// Check if this is a Shutdown request
-    #[must_use]
-    pub const fn is_shutdown(&self) -> bool {
-        matches!(self, Self::Shutdown)
     }
 
     /// Get the script from a Parse request
@@ -179,7 +171,6 @@ pub fn handle_request(request: &Request) -> Response {
             }
         }
         Request::Ping => Response::success("pong"),
-        Request::Shutdown => Response::success("shutting down"),
     }
 }
 
@@ -287,7 +278,7 @@ impl Server {
                 Ok((stream, _addr)) => {
                     // Set blocking for the client stream
                     stream.set_nonblocking(false)?;
-                    self.handle_client(&stream);
+                    self.handle_client(stream);
                 }
                 Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                     // No connection available, sleep briefly and check shutdown
@@ -307,22 +298,25 @@ impl Server {
     }
 
     /// Handle a single client connection
-    fn handle_client(&self, stream: &UnixStream) {
-        let reader = BufReader::new(stream);
+    #[allow(clippy::unused_self)] // Method logically belongs to Server
+    fn handle_client(&self, stream: UnixStream) {
+        // Clone the stream to get separate handles for reading and writing.
+        // This avoids issues with BufReader's internal buffering when sharing
+        // a single reference for both read and write operations.
+        let read_stream = match stream.try_clone() {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Failed to clone stream: {e}");
+                return;
+            }
+        };
+        let reader = BufReader::new(read_stream);
         let mut writer = stream;
 
         for line in reader.lines() {
             match line {
                 Ok(line) if line.is_empty() => {}
                 Ok(line) => {
-                    // Check for shutdown request
-                    if matches!(parse_request(&line), Ok(Request::Shutdown)) {
-                        let response = handle_line(&line);
-                        let _ = writeln!(writer, "{response}");
-                        self.shutdown.store(true, Ordering::Relaxed);
-                        break;
-                    }
-
                     let response = handle_line(&line);
                     if writeln!(writer, "{response}").is_err() {
                         break;
@@ -398,13 +392,6 @@ mod tests {
         let json = r#"{"method":"ping"}"#;
         let req = parse_request(json).unwrap();
         assert!(req.is_ping());
-    }
-
-    #[test]
-    fn test_parse_request_shutdown() {
-        let json = r#"{"method":"shutdown"}"#;
-        let req = parse_request(json).unwrap();
-        assert!(req.is_shutdown());
     }
 
     #[test]
@@ -673,16 +660,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_handle_request_shutdown() {
-        let req = Request::Shutdown;
-        let resp = handle_request(&req);
-        assert!(resp.is_success());
-        if let Response::Success { result } = resp {
-            assert_eq!(result, "shutting down");
-        }
-    }
-
     // ==================== Handle Line Tests ====================
 
     #[test]
@@ -853,12 +830,14 @@ mod tests {
     }
 
     #[test]
-    fn test_server_integration_shutdown_method() {
+    fn test_server_integration_reconnect() {
+        // Regression test for issue #1: server hangs on second connection
         setup();
         let socket_path = test_socket_path();
         let socket_path_clone = socket_path.clone();
 
         let server = Server::with_path(&socket_path);
+        let shutdown = server.shutdown_handle();
 
         let server_thread = thread::spawn(move || {
             let _ = server.run();
@@ -866,22 +845,48 @@ mod tests {
 
         thread::sleep(Duration::from_millis(100));
 
-        let mut stream = UnixStream::connect(&socket_path_clone).unwrap();
-        stream
-            .set_read_timeout(Some(Duration::from_secs(5)))
-            .unwrap();
+        // First connection
+        {
+            let mut stream = UnixStream::connect(&socket_path_clone).unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
 
-        // Send shutdown request - server should exit gracefully
-        let resp = send_request(&mut stream, r#"{"method":"shutdown"}"#);
-        assert!(resp.is_success());
+            let resp = send_request(&mut stream, r#"{"method":"ping"}"#);
+            assert!(resp.is_success());
+            // stream is dropped here, simulating client disconnect
+        }
 
-        // Server thread should exit
-        let result = server_thread.join();
-        assert!(result.is_ok());
-
-        // Socket should be cleaned up
+        // Brief pause to let server process the disconnect
         thread::sleep(Duration::from_millis(50));
-        assert!(!Path::new(&socket_path_clone).exists());
+
+        // Second connection - this was hanging before the fix
+        {
+            let mut stream = UnixStream::connect(&socket_path_clone).unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+
+            let resp = send_request(&mut stream, r#"{"method":"ping"}"#);
+            assert!(
+                resp.is_success(),
+                "Second connection should work after first disconnects"
+            );
+        }
+
+        // Third connection for good measure
+        {
+            let mut stream = UnixStream::connect(&socket_path_clone).unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+
+            let resp = send_request(&mut stream, r#"{"method":"parse","script":"echo hello"}"#);
+            assert!(resp.is_success(), "Third connection should also work");
+        }
+
+        shutdown.store(true, Ordering::Relaxed);
+        let _ = server_thread.join();
     }
 
     #[test]
