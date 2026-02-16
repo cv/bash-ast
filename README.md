@@ -11,6 +11,7 @@ Parse bash scripts to JSON AST using GNU Bash's actual parser, and convert AST b
 - **100% bash compatibility**: Uses the actual GNU Bash parser via FFI
 - **JSON output**: Serializes the AST to JSON for easy consumption
 - **Round-trip support**: Convert AST back to bash with `--to-bash`
+- **Server mode**: Low-latency Unix socket server for editor/tool integration
 - **All bash constructs**: Supports all 16 bash command types including:
   - Simple commands (`cmd arg1 arg2`)
   - Pipelines (`cmd1 | cmd2`)
@@ -133,6 +134,32 @@ echo 'for i in a b c; do echo $i; done' | ./target/release/bash-ast
 
 # Round-trip: parse and regenerate
 echo 'for i in a b c; do echo $i; done' | ./target/release/bash-ast | ./target/release/bash-ast -b
+```
+
+### Server Mode
+
+For low-latency integration with editors and tools, run as a Unix socket server:
+
+```bash
+# Start server (default: $XDG_RUNTIME_DIR/bash-ast.sock or /tmp/bash-ast.sock)
+bash-ast --server
+
+# Or specify a custom socket path
+bash-ast --server /tmp/my-parser.sock
+```
+
+Send newline-delimited JSON requests:
+
+```bash
+# Parse bash to AST
+echo '{"method":"parse","script":"echo hello"}' | nc -U /tmp/bash-ast.sock
+# → {"result":{"type":"simple","words":[{"word":"echo"},{"word":"hello"}],...}}
+
+# Convert AST back to bash
+echo '{"method":"to_bash","ast":{"type":"simple","words":[{"word":"echo"}],"redirects":[]}}' | nc -U /tmp/bash-ast.sock
+# → {"result":"echo"}
+
+# Other methods: schema, ping, shutdown
 ```
 
 ### Library

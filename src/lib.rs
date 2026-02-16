@@ -45,6 +45,7 @@ mod ast;
 mod bash_init;
 mod convert;
 mod ffi;
+pub mod server;
 mod to_bash;
 
 pub use ast::*;

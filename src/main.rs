@@ -2,6 +2,7 @@
 //!
 //! Parses bash scripts and outputs JSON AST.
 
+use bash_ast::server::{default_socket_path, Server};
 use bash_ast::{init, parse_to_json, schema_json, to_bash, Command};
 use std::env;
 use std::fs;
@@ -10,11 +11,12 @@ use std::process::ExitCode;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-const HELP: &str = r"bash-ast - Parse bash scripts to JSON AST
+const HELP: &str = r#"bash-ast - Parse bash scripts to JSON AST
 
 USAGE:
     bash-ast [OPTIONS] [FILE]
     command | bash-ast [OPTIONS]
+    bash-ast --server [SOCKET_PATH]
 
 DESCRIPTION:
     Parses bash scripts using GNU Bash's actual parser (via FFI) and outputs
@@ -26,11 +28,12 @@ ARGUMENTS:
               Use '-' to read from stdin explicitly.
 
 OPTIONS:
-    -h, --help       Print this help message and exit
-    -V, --version    Print version information and exit
-    -c, --compact    Output compact JSON (default: pretty-printed)
-    -s, --schema     Print JSON Schema for the AST and exit
-    -b, --to-bash    Convert JSON AST back to bash script
+    -h, --help             Print this help message and exit
+    -V, --version          Print version information and exit
+    -c, --compact          Output compact JSON (default: pretty-printed)
+    -s, --schema           Print JSON Schema for the AST and exit
+    -b, --to-bash          Convert JSON AST back to bash script
+    -S, --server [PATH]    Start Unix socket server (default: $XDG_RUNTIME_DIR/bash-ast.sock)
 
 EXAMPLES:
     # Parse a script file
@@ -53,6 +56,24 @@ EXAMPLES:
 
     # Convert JSON AST back to bash
     bash-ast script.sh | bash-ast --to-bash
+
+    # Start server mode (low-latency Unix socket)
+    bash-ast --server
+    bash-ast --server /tmp/my-bash-ast.sock
+
+SERVER MODE:
+    In server mode, bash-ast listens on a Unix socket for NDJSON requests.
+    Each request/response is a single line of JSON.
+
+    Methods:
+      {"method":"parse","script":"echo hello"}     Parse bash to AST
+      {"method":"to_bash","ast":{...}}             Convert AST to bash
+      {"method":"schema"}                          Get JSON Schema
+      {"method":"ping"}                            Health check
+      {"method":"shutdown"}                        Stop the server
+
+    Example client (bash):
+      echo '{"method":"parse","script":"echo hi"}' | nc -U /tmp/bash-ast.sock
 
 OUTPUT:
     On success, prints JSON AST to stdout and exits with code 0.
@@ -86,7 +107,7 @@ SUPPORTED CONSTRUCTS:
 MORE INFO:
     Repository: https://github.com/cv/bash-ast
     License:    GPL-3.0 (due to linkage with GNU Bash)
-";
+"#;
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
@@ -103,20 +124,32 @@ struct Config {
     compact: bool,
     schema: bool,
     to_bash: bool,
+    server: bool,
+    socket_path: Option<String>,
     file: Option<String>,
 }
 
 fn parse_args(args: &[String]) -> Result<Config, String> {
     let mut config = Config::default();
     let mut positional = Vec::new();
+    let mut args_iter = args.iter().peekable();
 
-    for arg in args {
+    while let Some(arg) = args_iter.next() {
         match arg.as_str() {
             "-h" | "--help" => config.help = true,
             "-V" | "--version" => config.version = true,
             "-c" | "--compact" => config.compact = true,
             "-s" | "--schema" => config.schema = true,
             "-b" | "--to-bash" => config.to_bash = true,
+            "-S" | "--server" => {
+                config.server = true;
+                // Check if next arg is a socket path (not another option)
+                if let Some(next) = args_iter.peek() {
+                    if !next.starts_with('-') {
+                        config.socket_path = Some(args_iter.next().unwrap().clone());
+                    }
+                }
+            }
             "-" => positional.push(arg.clone()), // `-` means read from stdin
             s if s.starts_with('-') => {
                 return Err(format!(
@@ -125,6 +158,13 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
             }
             _ => positional.push(arg.clone()),
         }
+    }
+
+    if config.server && !positional.is_empty() {
+        return Err(
+            "Cannot specify file when using --server mode.\nTry 'bash-ast --help' for usage."
+                .to_string(),
+        );
     }
 
     if positional.len() > 1 {
@@ -178,6 +218,17 @@ where
     if config.schema {
         let pretty = !config.compact;
         let _ = writeln!(output, "{}", schema_json(pretty));
+        return ExitCode::SUCCESS;
+    }
+
+    // Handle --server
+    if config.server {
+        let socket_path = config.socket_path.unwrap_or_else(default_socket_path);
+        let server = Server::with_path(&socket_path);
+        if let Err(e) = server.run() {
+            let _ = writeln!(error, "Server error: {e}");
+            return ExitCode::from(1);
+        }
         return ExitCode::SUCCESS;
     }
 
@@ -456,5 +507,79 @@ mod tests {
         let t = TestRun::new(&["--to-bash"], json);
         assert!(t.success());
         assert!(t.stdout.contains("for i in a b c; do echo $i; done"));
+    }
+
+    // ==================== Server Option Tests ====================
+
+    #[test]
+    fn test_help_shows_server_option() {
+        // Help text should mention --server option
+        let t = TestRun::new(&["--help"], "");
+        assert!(t.success());
+        assert!(t.stdout.contains("--server"));
+        assert!(t.stdout.contains("-S"));
+        assert!(t.stdout.contains("SERVER MODE"));
+        assert!(t.stdout.contains("Unix socket"));
+    }
+
+    #[test]
+    fn test_parse_args_server_default_path() {
+        // --server without path should use default
+        let args: Vec<String> = vec!["--server".to_string()];
+        let config = parse_args(&args).unwrap();
+        assert!(config.server);
+        assert!(config.socket_path.is_none());
+    }
+
+    #[test]
+    fn test_parse_args_server_with_path() {
+        // --server with path should capture the path
+        let args: Vec<String> = vec!["--server".to_string(), "/tmp/my.sock".to_string()];
+        let config = parse_args(&args).unwrap();
+        assert!(config.server);
+        assert_eq!(config.socket_path, Some("/tmp/my.sock".to_string()));
+    }
+
+    #[test]
+    fn test_parse_args_server_short() {
+        // -S should work same as --server
+        let args: Vec<String> = vec!["-S".to_string()];
+        let config = parse_args(&args).unwrap();
+        assert!(config.server);
+        assert!(config.socket_path.is_none());
+    }
+
+    #[test]
+    fn test_parse_args_server_short_with_path() {
+        // -S with path should capture the path
+        let args: Vec<String> = vec!["-S".to_string(), "/custom/path.sock".to_string()];
+        let config = parse_args(&args).unwrap();
+        assert!(config.server);
+        assert_eq!(config.socket_path, Some("/custom/path.sock".to_string()));
+    }
+
+    #[test]
+    fn test_parse_args_server_ignores_options_as_path() {
+        // --server followed by another option should not consume it as path
+        let args: Vec<String> = vec!["--server".to_string(), "--compact".to_string()];
+        let config = parse_args(&args).unwrap();
+        assert!(config.server);
+        assert!(config.socket_path.is_none());
+        assert!(config.compact);
+    }
+
+    #[test]
+    fn test_parse_args_server_with_positional_error() {
+        // --server mode followed by a positional after another option should error
+        // e.g., --server --compact script.sh
+        let args: Vec<String> = vec![
+            "--server".to_string(),
+            "--compact".to_string(),
+            "script.sh".to_string(),
+        ];
+        let result = parse_args(&args);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("Cannot specify file"));
     }
 }
