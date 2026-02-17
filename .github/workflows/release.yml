@@ -19,6 +19,9 @@ jobs:
           - name: Linux x86_64
             target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+          - name: Linux ARM64
+            target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
           - name: macOS ARM64
             target: aarch64-apple-darwin
             os: macos-latest
@@ -66,8 +69,16 @@ jobs:
           path: bash-ast-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
 
   linux-packages:
-    name: Build Linux Packages
-    runs-on: ubuntu-22.04  # Use older glibc for wider compatibility
+    name: Build Linux Packages (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            os: ubuntu-22.04  # Use older glibc for wider compatibility
+          - arch: arm64
+            os: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
         with:
@@ -108,13 +119,13 @@ jobs:
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-deb
+          name: linux-deb-${{ matrix.arch }}
           path: target/debian/*.deb
 
       - name: Upload .rpm artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-rpm
+          name: linux-rpm-${{ matrix.arch }}
           path: target/generate-rpm/*.rpm
 
   bottle:
