@@ -14,7 +14,7 @@ thiserror = "1.0"
 schemars = "1.2"
 
 [build-dependencies]
-bindgen = "0.70"
+bindgen = "0.72"
 cc = "1.0"
 
 [dev-dependencies]
