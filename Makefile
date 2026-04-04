@@ -20,7 +20,7 @@ test: ## Run all tests
 
 lint: ## Run linting (clippy + fmt check)
 	cargo fmt -- --check
-	cargo clippy -- -D warnings
+	cargo clippy --all-targets --all-features -- -D warnings
 
 fmt: ## Format code
 	cargo fmt
