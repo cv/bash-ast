@@ -638,6 +638,63 @@ mod tests {
         }
     }
 
+    fn normalize_command(command: &Command) -> serde_json::Value {
+        let mut value = serde_json::to_value(command).unwrap();
+        normalize_value(&mut value);
+        value
+    }
+
+    fn normalize_value(value: &mut serde_json::Value) {
+        match value {
+            serde_json::Value::Object(map) => {
+                map.remove("line");
+                for value in map.values_mut() {
+                    normalize_value(value);
+                }
+            }
+            serde_json::Value::Array(values) => {
+                for value in values {
+                    normalize_value(value);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    #[test]
+    fn test_handle_request_parse_then_to_bash_semantic_roundtrip_corpus() {
+        setup();
+
+        let cases = [
+            "cat <<EOF | grep h\nhello\nEOF",
+            "if cat <<EOF; then echo yes; else echo no; fi\nhello\nEOF",
+            "for i in a; do echo $i; sleep 1 & done",
+        ];
+
+        for script in cases {
+            let parsed = handle_request(&Request::Parse {
+                script: script.to_string(),
+            });
+            let Response::Success { result } = parsed else {
+                panic!("parse request failed for {script}");
+            };
+            let ast: Command = serde_json::from_value(result).unwrap();
+
+            let printed = handle_request(&Request::ToBash { ast: ast.clone() });
+            let Response::Success { result } = printed else {
+                panic!("to_bash request failed for {script}");
+            };
+            let bash = result.as_str().unwrap();
+
+            let reparsed = crate::parse(bash).unwrap();
+            assert_eq!(
+                normalize_command(&ast),
+                normalize_command(&reparsed),
+                "server semantic mismatch\noriginal:\n{script}\nregenerated:\n{bash}"
+            );
+        }
+    }
+
     #[test]
     fn test_handle_request_schema() {
         let req = Request::Schema;

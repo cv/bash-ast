@@ -508,6 +508,59 @@ mod tests {
         assert!(t.stdout.contains("for i in a b c; do echo $i; done"));
     }
 
+    fn normalize_command(command: &Command) -> serde_json::Value {
+        let mut value = serde_json::to_value(command).unwrap();
+        normalize_value(&mut value);
+        value
+    }
+
+    fn normalize_value(value: &mut serde_json::Value) {
+        match value {
+            serde_json::Value::Object(map) => {
+                map.remove("line");
+                for value in map.values_mut() {
+                    normalize_value(value);
+                }
+            }
+            serde_json::Value::Array(values) => {
+                for value in values {
+                    normalize_value(value);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn cli_to_bash(script: &str) -> String {
+        let parsed = TestRun::new(&[], script);
+        assert!(parsed.success(), "parse failed: {}", parsed.stderr);
+        let printed = TestRun::new(&["--to-bash"], &parsed.stdout);
+        assert!(printed.success(), "to-bash failed: {}", printed.stderr);
+        printed.stdout.trim_end().to_string()
+    }
+
+    #[test]
+    fn test_cli_parse_then_to_bash_semantic_roundtrip_corpus() {
+        init();
+
+        let cases = [
+            "cat <<EOF | grep h\nhello\nEOF",
+            "if cat <<EOF; then echo yes; else echo no; fi\nhello\nEOF",
+            "for i in a; do echo $i; sleep 1 & done",
+        ];
+
+        for script in cases {
+            let regenerated = cli_to_bash(script);
+            let ast1 = bash_ast::parse(script).unwrap();
+            let ast2 = bash_ast::parse(&regenerated).unwrap();
+            assert_eq!(
+                normalize_command(&ast1),
+                normalize_command(&ast2),
+                "CLI semantic mismatch\noriginal:\n{script}\nregenerated:\n{regenerated}"
+            );
+        }
+    }
+
     // ==================== Server Option Tests ====================
 
     #[test]
