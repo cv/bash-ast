@@ -37,6 +37,23 @@ pub fn assert_semantic_roundtrip(script: &str) {
     );
 }
 
+pub fn assert_semantic_roundtrip_ast(ast: &Command) {
+    setup();
+
+    let regenerated = to_bash(ast);
+    let reparsed = parse(&regenerated).unwrap_or_else(|e| {
+        panic!(
+            "failed to parse regenerated bash\nregenerated:\n{regenerated}\nerror: {e}\nast: {ast:?}"
+        )
+    });
+
+    assert_eq!(
+        normalize_command(ast),
+        normalize_command(&reparsed),
+        "semantic mismatch for hand-built AST\nregenerated:\n{regenerated}\nast: {ast:?}"
+    );
+}
+
 pub fn normalize_command(command: &Command) -> serde_json::Value {
     let mut value = serde_json::to_value(command).expect("command should serialize");
     normalize_for_comparison(&mut value);
