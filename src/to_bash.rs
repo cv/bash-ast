@@ -588,7 +588,7 @@ fn write_list(
     // 1. Commands are on different lines, OR
     // 2. Left command has a heredoc (heredoc content must come before the next command)
     let use_newline = op == ListOp::Semi
-        && (left_has_heredoc
+        && ((include_heredoc_content && left_has_heredoc)
             || match (get_last_line(left), get_first_line(right)) {
                 (Some(l), Some(r)) => r > l,
                 _ => false,
@@ -655,6 +655,7 @@ fn ends_with_background(cmd: &Command) -> bool {
                 if words.is_empty() && redirects.is_empty() && assignments.is_none()
             ) || ends_with_background(right)
         }
+        Command::List { right, .. } => ends_with_background(right),
         _ => false,
     }
 }
@@ -1059,6 +1060,30 @@ mod tests {
         init();
     }
 
+    fn simple_cmd(words: &[&str]) -> Command {
+        Command::Simple {
+            line: None,
+            words: words
+                .iter()
+                .map(|word| Word {
+                    word: (*word).to_string(),
+                    flags: 0,
+                })
+                .collect(),
+            redirects: Vec::new(),
+            assignments: None,
+        }
+    }
+
+    fn heredoc_redirect(eof: &str, content: &str) -> Redirect {
+        Redirect {
+            direction: RedirectType::HereDoc,
+            source_fd: Some(0),
+            target: RedirectTarget::File(content.to_string()),
+            here_doc_eof: Some(eof.to_string()),
+        }
+    }
+
     /// Helper to test round-trip: parse -> `to_bash` -> parse -> compare structure
     fn assert_round_trip(script: &str) {
         setup();
@@ -1369,5 +1394,141 @@ mod tests {
     #[test]
     fn test_declare_assignment() {
         assert_round_trip("declare -r CONST=42");
+    }
+
+    #[test]
+    fn test_has_heredoc_descends_into_nested_commands() {
+        let cmd = Command::If {
+            line: None,
+            condition: Box::new(simple_cmd(&["true"])),
+            then_branch: Box::new(Command::Case {
+                line: None,
+                word: "x".to_string(),
+                clauses: vec![CaseClause {
+                    patterns: vec!["a".to_string()],
+                    action: Some(Box::new(Command::Group {
+                        line: None,
+                        body: Box::new(Command::Simple {
+                            line: None,
+                            words: vec![Word {
+                                word: "cat".to_string(),
+                                flags: 0,
+                            }],
+                            redirects: vec![heredoc_redirect("EOF", "hello\n")],
+                            assignments: None,
+                        }),
+                        redirects: Vec::new(),
+                    })),
+                    flags: None,
+                }],
+                redirects: Vec::new(),
+            }),
+            else_branch: None,
+            redirects: Vec::new(),
+        };
+
+        assert!(has_heredoc(&cmd));
+    }
+
+    #[test]
+    fn test_collect_heredocs_preserves_lexical_order() {
+        let cmd = Command::List {
+            line: None,
+            op: ListOp::And,
+            left: Box::new(Command::Simple {
+                line: None,
+                words: vec![Word {
+                    word: "cat".to_string(),
+                    flags: 0,
+                }],
+                redirects: vec![heredoc_redirect("A", "one\n")],
+                assignments: None,
+            }),
+            right: Box::new(Command::Simple {
+                line: None,
+                words: vec![Word {
+                    word: "cat".to_string(),
+                    flags: 0,
+                }],
+                redirects: vec![heredoc_redirect("B", "two\n")],
+                assignments: None,
+            }),
+        };
+
+        let heredocs = collect_heredocs(&cmd);
+        let markers: Vec<_> = heredocs
+            .iter()
+            .map(|redirect| redirect.here_doc_eof.as_deref().unwrap())
+            .collect();
+        assert_eq!(markers, vec!["A", "B"]);
+    }
+
+    #[test]
+    fn test_write_list_without_heredoc_content_keeps_inline_separator() {
+        let cmd = Command::List {
+            line: None,
+            op: ListOp::Semi,
+            left: Box::new(Command::Simple {
+                line: None,
+                words: vec![Word {
+                    word: "cat".to_string(),
+                    flags: 0,
+                }],
+                redirects: vec![heredoc_redirect("EOF", "hello\n")],
+                assignments: None,
+            }),
+            right: Box::new(simple_cmd(&["break"])),
+        };
+
+        let mut out = String::new();
+        write_command_impl(&cmd, &mut out, false);
+        assert_eq!(out, "cat <<EOF; break");
+    }
+
+    #[test]
+    fn test_ends_with_background_detects_nested_amp_lists() {
+        let cmd = Command::List {
+            line: None,
+            op: ListOp::Semi,
+            left: Box::new(simple_cmd(&["echo", "one"])),
+            right: Box::new(Command::List {
+                line: None,
+                op: ListOp::Amp,
+                left: Box::new(simple_cmd(&["sleep", "1"])),
+                right: Box::new(simple_cmd(&[])),
+            }),
+        };
+
+        assert!(ends_with_background(&cmd));
+    }
+
+    #[test]
+    fn test_last_if_branch_returns_terminal_else_branch() {
+        let cmd = Command::If {
+            line: None,
+            condition: Box::new(simple_cmd(&["cond1"])),
+            then_branch: Box::new(simple_cmd(&["then1"])),
+            else_branch: Some(Box::new(Command::If {
+                line: None,
+                condition: Box::new(simple_cmd(&["cond2"])),
+                then_branch: Box::new(simple_cmd(&["then2"])),
+                else_branch: Some(Box::new(simple_cmd(&["final-else"]))),
+                redirects: Vec::new(),
+            })),
+            redirects: Vec::new(),
+        };
+
+        let Command::If {
+            else_branch: Some(else_branch),
+            ..
+        } = &cmd
+        else {
+            panic!("expected if command with else branch");
+        };
+        let last = last_if_branch(else_branch);
+        match last {
+            Command::Simple { words, .. } => assert_eq!(words[0].word, "final-else"),
+            other => panic!("expected simple command, got {other:?}"),
+        }
     }
 }
