@@ -348,7 +348,7 @@ fn test_subshell_with_redirects_exact_output() {
         body: Box::new(simple(&["echo", "hi"])),
         redirects: vec![redirect_file(RedirectType::Output, Some(1), "out")],
     };
-    assert_exact_and_semantic(&ast, "(echo hi) >out");
+    assert_exact_and_semantic(&ast, "( echo hi ) >out");
 }
 
 #[test]
@@ -443,5 +443,5 @@ fn test_nested_conditional_binary_exact_output() {
 #[test]
 fn test_subshell_builder_exact_output() {
     let ast = subshell(simple(&["echo", "hi"]));
-    assert_exact_and_semantic(&ast, "(echo hi)");
+    assert_exact_and_semantic(&ast, "( echo hi )");
 }

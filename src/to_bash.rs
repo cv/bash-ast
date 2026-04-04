@@ -934,9 +934,9 @@ fn write_subshell(
     out: &mut String,
     include_heredoc_content: bool,
 ) {
-    out.push('(');
+    out.push_str("( ");
     write_command_impl(body, out, false);
-    out.push(')');
+    out.push_str(" )");
     write_redirects_impl(redirects, out, false);
     if include_heredoc_content {
         write_deferred_heredocs(body, out);
