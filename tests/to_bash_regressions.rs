@@ -3,50 +3,9 @@
 //! These cover bugs where the printer used to emit syntactically invalid bash
 //! when heredocs interacted with lists, pipelines, or compound commands.
 
-use bash_ast::{init, parse, to_bash};
+mod common;
 
-fn setup() {
-    init();
-}
-
-fn assert_semantic_roundtrip(script: &str) {
-    setup();
-
-    let original =
-        parse(script).unwrap_or_else(|e| panic!("failed to parse original {script:?}: {e}"));
-    let regenerated = to_bash(&original);
-    let reparsed = parse(&regenerated).unwrap_or_else(|e| {
-        panic!(
-            "failed to parse regenerated script\noriginal: {script}\nregenerated:\n{regenerated}\nerror: {e}"
-        )
-    });
-
-    let lhs = normalize(&serde_json::to_value(&original).unwrap());
-    let rhs = normalize(&serde_json::to_value(&reparsed).unwrap());
-    assert_eq!(
-        lhs, rhs,
-        "semantic mismatch\noriginal: {script}\nregenerated:\n{regenerated}"
-    );
-}
-
-fn normalize(value: &serde_json::Value) -> serde_json::Value {
-    match value {
-        serde_json::Value::Object(map) => {
-            let mut normalized = serde_json::Map::new();
-            for (key, value) in map {
-                if key == "line" {
-                    continue;
-                }
-                normalized.insert(key.clone(), normalize(value));
-            }
-            serde_json::Value::Object(normalized)
-        }
-        serde_json::Value::Array(values) => {
-            serde_json::Value::Array(values.iter().map(normalize).collect())
-        }
-        _ => value.clone(),
-    }
-}
+use common::assert_semantic_roundtrip;
 
 #[test]
 fn test_pipeline_with_heredoc_roundtrip() {

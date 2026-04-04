@@ -3,16 +3,10 @@
 //! These test that redirects attached to compound commands (while, for, if, etc.)
 //! are properly captured and round-tripped, and that negation is handled correctly.
 
-use bash_ast::{init, parse, to_bash, Command, Redirect};
+mod common;
 
-fn setup() {
-    init();
-}
-
-fn parse_ok(script: &str) -> Command {
-    setup();
-    parse(script).unwrap_or_else(|e| panic!("Failed to parse {script:?}: {e}"))
-}
+use bash_ast::{Command, Redirect};
+use common::parse_ok;
 
 /// Helper to check if a command has redirects
 const fn get_redirects(cmd: &Command) -> Option<&Vec<Redirect>> {
@@ -96,10 +90,9 @@ fn test_compound_with_multiple_redirects() {
 // Round-trip tests
 #[test]
 fn test_while_redirect_roundtrip() {
-    setup();
     let original = "while read line; do echo $line; done < input.txt";
-    let ast = parse(original).unwrap();
-    let regenerated = to_bash(&ast);
+    let ast = parse_ok(original);
+    let regenerated = bash_ast::to_bash(&ast);
     assert!(
         regenerated.contains("< input.txt") || regenerated.contains("<input.txt"),
         "Regenerated script should contain redirect: {regenerated}"
@@ -108,10 +101,9 @@ fn test_while_redirect_roundtrip() {
 
 #[test]
 fn test_for_redirect_roundtrip() {
-    setup();
     let original = "for i in a b c; do echo $i; done > output.txt";
-    let ast = parse(original).unwrap();
-    let regenerated = to_bash(&ast);
+    let ast = parse_ok(original);
+    let regenerated = bash_ast::to_bash(&ast);
     assert!(
         regenerated.contains("> output.txt") || regenerated.contains(">output.txt"),
         "Regenerated script should contain redirect: {regenerated}"
@@ -120,10 +112,9 @@ fn test_for_redirect_roundtrip() {
 
 #[test]
 fn test_group_redirect_roundtrip() {
-    setup();
     let original = "{ echo hello; } > file.txt 2>&1";
-    let ast = parse(original).unwrap();
-    let regenerated = to_bash(&ast);
+    let ast = parse_ok(original);
+    let regenerated = bash_ast::to_bash(&ast);
     assert!(
         regenerated.contains("> file.txt") || regenerated.contains(">file.txt"),
         "Regenerated script should contain redirect: {regenerated}"
@@ -164,10 +155,9 @@ fn test_negated_simple_in_list() {
 
 #[test]
 fn test_negated_roundtrip() {
-    setup();
     let original = "! grep -q pattern file && echo not found";
-    let ast = parse(original).unwrap();
-    let regenerated = to_bash(&ast);
+    let ast = parse_ok(original);
+    let regenerated = bash_ast::to_bash(&ast);
     assert!(
         regenerated.starts_with("! "),
         "Regenerated should start with '! ': {regenerated}"
@@ -176,10 +166,9 @@ fn test_negated_roundtrip() {
 
 #[test]
 fn test_negated_pipeline_roundtrip() {
-    setup();
     let original = "! cmd1 | cmd2 | cmd3";
-    let ast = parse(original).unwrap();
-    let regenerated = to_bash(&ast);
+    let ast = parse_ok(original);
+    let regenerated = bash_ast::to_bash(&ast);
     assert!(
         regenerated.starts_with("! "),
         "Regenerated should start with '! ': {regenerated}"

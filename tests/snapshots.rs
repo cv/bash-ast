@@ -5,13 +5,12 @@
 //!
 //! To update snapshots: delete the .expected.json file and run tests.
 
-use bash_ast::{init, parse_to_json};
+mod common;
+
+use bash_ast::parse_to_json;
+use common::{normalize_json_for_comparison, semantic_roundtrip, setup};
 use std::fs;
 use std::path::Path;
-
-fn setup() {
-    init();
-}
 
 /// Run snapshot tests for all .sh files in the snapshots directory
 #[test]
@@ -132,8 +131,6 @@ fn test_snapshots_roundtrip() {
 /// Line numbers are ignored since regenerated code has different formatting.
 #[test]
 fn test_snapshots_to_bash_roundtrip() {
-    use bash_ast::{parse, to_bash};
-
     setup();
 
     let snapshot_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/snapshots");
@@ -163,25 +160,10 @@ fn test_snapshots_to_bash_roundtrip() {
         let script = fs::read_to_string(script_path)
             .unwrap_or_else(|e| panic!("Failed to read {script_path:?}: {e}"));
 
-        // Parse original
-        let ast1 = match parse(&script) {
-            Ok(ast) => ast,
+        let (ast1, regenerated, ast2) = match semantic_roundtrip(&script) {
+            Ok(result) => result,
             Err(e) => {
-                failures.push(format!("{script_name}: failed to parse original: {e}"));
-                continue;
-            }
-        };
-
-        // Convert to bash
-        let regenerated = to_bash(&ast1);
-
-        // Parse regenerated
-        let ast2 = match parse(&regenerated) {
-            Ok(ast) => ast,
-            Err(e) => {
-                failures.push(format!(
-                    "{script_name}: failed to parse regenerated script: {e}\nRegenerated:\n{regenerated}"
-                ));
+                failures.push(format!("{script_name}: {e}"));
                 continue;
             }
         };
@@ -206,50 +188,4 @@ fn test_snapshots_to_bash_roundtrip() {
         failures.len(),
         failures.join("\n\n---\n\n")
     );
-}
-
-/// Remove line numbers and sort redirects for comparison
-fn normalize_json_for_comparison(json: &str) -> String {
-    // Parse and normalize
-    let mut value: serde_json::Value = serde_json::from_str(json).unwrap();
-    normalize_for_comparison(&mut value);
-    serde_json::to_string(&value).unwrap()
-}
-
-/// Recursively normalize JSON for comparison
-/// - Removes "line" fields
-/// - Sorts "redirects" arrays for order-independent comparison
-fn normalize_for_comparison(value: &mut serde_json::Value) {
-    match value {
-        serde_json::Value::Object(map) => {
-            map.remove("line");
-
-            // Sort redirects array by direction+target for consistent ordering
-            if let Some(serde_json::Value::Array(redirects)) = map.get_mut("redirects") {
-                redirects.sort_by(|a, b| {
-                    let key_a = format!(
-                        "{}-{}",
-                        a.get("direction").and_then(|v| v.as_str()).unwrap_or(""),
-                        a.get("target").and_then(|v| v.as_str()).unwrap_or("")
-                    );
-                    let key_b = format!(
-                        "{}-{}",
-                        b.get("direction").and_then(|v| v.as_str()).unwrap_or(""),
-                        b.get("target").and_then(|v| v.as_str()).unwrap_or("")
-                    );
-                    key_a.cmp(&key_b)
-                });
-            }
-
-            for v in map.values_mut() {
-                normalize_for_comparison(v);
-            }
-        }
-        serde_json::Value::Array(arr) => {
-            for v in arr {
-                normalize_for_comparison(v);
-            }
-        }
-        _ => {}
-    }
 }
