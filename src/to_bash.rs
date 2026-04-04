@@ -34,6 +34,7 @@ fn write_command(cmd: &Command, out: &mut String) {
 }
 
 /// Write a command, optionally including heredoc content
+#[allow(clippy::too_many_lines)]
 fn write_command_impl(cmd: &Command, out: &mut String, include_heredoc_content: bool) {
     match cmd {
         Command::Simple {
@@ -52,10 +53,10 @@ fn write_command_impl(cmd: &Command, out: &mut String, include_heredoc_content: 
         }
         Command::Pipeline {
             commands, negated, ..
-        } => write_pipeline(commands, *negated, out),
+        } => write_pipeline(commands, *negated, out, include_heredoc_content),
         Command::List {
             op, left, right, ..
-        } => write_list(*op, left, right, out),
+        } => write_list(*op, left, right, out, include_heredoc_content),
         Command::For {
             variable,
             words,
@@ -63,20 +64,27 @@ fn write_command_impl(cmd: &Command, out: &mut String, include_heredoc_content: 
             redirects,
             ..
         } => {
-            write_for(variable, words.as_deref(), body, redirects, out);
+            write_for(
+                variable,
+                words.as_deref(),
+                body,
+                redirects,
+                out,
+                include_heredoc_content,
+            );
         }
         Command::While {
             test,
             body,
             redirects,
             ..
-        } => write_while(test, body, redirects, out),
+        } => write_while(test, body, redirects, out, include_heredoc_content),
         Command::Until {
             test,
             body,
             redirects,
             ..
-        } => write_until(test, body, redirects, out),
+        } => write_until(test, body, redirects, out, include_heredoc_content),
         Command::If {
             condition,
             then_branch,
@@ -90,6 +98,7 @@ fn write_command_impl(cmd: &Command, out: &mut String, include_heredoc_content: 
                 else_branch.as_deref(),
                 redirects,
                 out,
+                include_heredoc_content,
             );
         }
         Command::Case {
@@ -97,7 +106,7 @@ fn write_command_impl(cmd: &Command, out: &mut String, include_heredoc_content: 
             clauses,
             redirects,
             ..
-        } => write_case(word, clauses, redirects, out),
+        } => write_case(word, clauses, redirects, out, include_heredoc_content),
         Command::Select {
             variable,
             words,
@@ -105,15 +114,24 @@ fn write_command_impl(cmd: &Command, out: &mut String, include_heredoc_content: 
             redirects,
             ..
         } => {
-            write_select(variable, words.as_deref(), body, redirects, out);
+            write_select(
+                variable,
+                words.as_deref(),
+                body,
+                redirects,
+                out,
+                include_heredoc_content,
+            );
         }
         Command::Group {
             body, redirects, ..
-        } => write_group(body, redirects, out),
+        } => write_group(body, redirects, out, include_heredoc_content),
         Command::Subshell {
             body, redirects, ..
-        } => write_subshell(body, redirects, out),
-        Command::FunctionDef { name, body, .. } => write_function_def(name, body, out),
+        } => write_subshell(body, redirects, out, include_heredoc_content),
+        Command::FunctionDef { name, body, .. } => {
+            write_function_def(name, body, out, include_heredoc_content);
+        }
         Command::Arithmetic { expression, .. } => write_arithmetic(expression, out),
         Command::ArithmeticFor {
             init,
@@ -122,10 +140,12 @@ fn write_command_impl(cmd: &Command, out: &mut String, include_heredoc_content: 
             body,
             ..
         } => {
-            write_arith_for(init, test, step, body, out);
+            write_arith_for(init, test, step, body, out, include_heredoc_content);
         }
         Command::Conditional { expr, .. } => write_conditional(expr, out),
-        Command::Coproc { name, body, .. } => write_coproc(name.as_deref(), body, out),
+        Command::Coproc { name, body, .. } => {
+            write_coproc(name.as_deref(), body, out, include_heredoc_content);
+        }
     }
 }
 
@@ -192,12 +212,6 @@ fn write_simple_impl(
 
     // Write redirects
     write_redirects_impl(redirects, out, include_heredoc_content);
-}
-
-/// Write multiple redirects
-/// Heredocs are handled specially - their content comes after all other redirects
-fn write_redirects(redirects: &[Redirect], out: &mut String) {
-    write_redirects_impl(redirects, out, true);
 }
 
 /// Write redirects, optionally including heredoc content
@@ -336,7 +350,12 @@ fn write_redirect(redirect: &Redirect, out: &mut String) {
 }
 
 /// Write a pipeline (cmd1 | cmd2 | cmd3)
-fn write_pipeline(commands: &[Command], negated: bool, out: &mut String) {
+fn write_pipeline(
+    commands: &[Command],
+    negated: bool,
+    out: &mut String,
+    include_heredoc_content: bool,
+) {
     if negated {
         out.push_str("! ");
     }
@@ -344,7 +363,10 @@ fn write_pipeline(commands: &[Command], negated: bool, out: &mut String) {
         if i > 0 {
             out.push_str(" | ");
         }
-        write_command(cmd, out);
+        write_command_impl(cmd, out, false);
+    }
+    if include_heredoc_content {
+        write_deferred_heredocs_from_commands(commands, out);
     }
 }
 
@@ -367,61 +389,192 @@ fn get_last_line(cmd: &Command) -> Option<u32> {
     }
 }
 
-/// Check if a command has any heredoc redirects (requires newline after)
+/// Check if a command subtree contains any heredoc redirects.
 fn has_heredoc(cmd: &Command) -> bool {
     match cmd {
-        Command::List { left, right, .. } => has_heredoc(left) || has_heredoc(right),
+        Command::Simple { redirects, .. } => redirects.iter().any(is_heredoc_redirect),
         Command::Pipeline { commands, .. } => commands.iter().any(has_heredoc),
-        _ => cmd
-            .redirects()
-            .is_some_and(|r| r.iter().any(|r| r.direction == RedirectType::HereDoc)),
+        Command::List { left, right, .. } => has_heredoc(left) || has_heredoc(right),
+        Command::For {
+            body, redirects, ..
+        }
+        | Command::Select {
+            body, redirects, ..
+        }
+        | Command::Group {
+            body, redirects, ..
+        }
+        | Command::Subshell {
+            body, redirects, ..
+        } => has_heredoc(body) || redirects.iter().any(is_heredoc_redirect),
+        Command::While {
+            test,
+            body,
+            redirects,
+            ..
+        }
+        | Command::Until {
+            test,
+            body,
+            redirects,
+            ..
+        } => has_heredoc(test) || has_heredoc(body) || redirects.iter().any(is_heredoc_redirect),
+        Command::If {
+            condition,
+            then_branch,
+            else_branch,
+            redirects,
+            ..
+        } => {
+            has_heredoc(condition)
+                || has_heredoc(then_branch)
+                || else_branch.as_deref().is_some_and(has_heredoc)
+                || redirects.iter().any(is_heredoc_redirect)
+        }
+        Command::Case {
+            clauses, redirects, ..
+        } => {
+            clauses
+                .iter()
+                .any(|clause| clause.action.as_deref().is_some_and(has_heredoc))
+                || redirects.iter().any(is_heredoc_redirect)
+        }
+        Command::FunctionDef { body, .. }
+        | Command::ArithmeticFor { body, .. }
+        | Command::Coproc { body, .. } => has_heredoc(body),
+        Command::Arithmetic { .. } | Command::Conditional { .. } => false,
     }
 }
 
-/// Collect all heredocs from a command tree
+fn is_heredoc_redirect(redirect: &Redirect) -> bool {
+    redirect.direction == RedirectType::HereDoc
+}
+
+/// Collect all heredocs from a command tree in lexical order.
 fn collect_heredocs(cmd: &Command) -> Vec<&Redirect> {
     let mut heredocs = Vec::new();
     collect_heredocs_impl(cmd, &mut heredocs);
     heredocs
 }
 
-fn collect_heredocs_impl<'a>(cmd: &'a Command, heredocs: &mut Vec<&'a Redirect>) {
-    match cmd {
-        Command::List { left, right, .. } => {
-            collect_heredocs_impl(left, heredocs);
-            collect_heredocs_impl(right, heredocs);
-        }
-        Command::Pipeline { commands, .. } => {
-            for c in commands {
-                collect_heredocs_impl(c, heredocs);
-            }
-        }
-        _ => {
-            if let Some(redirects) = cmd.redirects() {
-                for r in redirects {
-                    if r.direction == RedirectType::HereDoc {
-                        heredocs.push(r);
-                    }
-                }
-            }
+fn collect_redirect_heredocs<'a>(redirects: &'a [Redirect], heredocs: &mut Vec<&'a Redirect>) {
+    for redirect in redirects {
+        if is_heredoc_redirect(redirect) {
+            heredocs.push(redirect);
         }
     }
 }
 
-/// Write a list (cmd1 && cmd2, cmd1 || cmd2, etc.)
-fn write_list(op: ListOp, left: &Command, right: &Command, out: &mut String) {
-    // For And/Or with heredocs, we need special handling:
-    // The heredoc content must come AFTER the entire command line
-    let left_has_heredoc = has_heredoc(left);
-    let defer_heredocs = (op == ListOp::And || op == ListOp::Or) && left_has_heredoc;
-
-    if defer_heredocs {
-        // Write left command without heredoc content
-        write_command_impl(left, out, false);
-    } else {
-        write_command(left, out);
+fn collect_heredocs_impl<'a>(cmd: &'a Command, heredocs: &mut Vec<&'a Redirect>) {
+    match cmd {
+        Command::Simple { redirects, .. } => collect_redirect_heredocs(redirects, heredocs),
+        Command::Pipeline { commands, .. } => {
+            for command in commands {
+                collect_heredocs_impl(command, heredocs);
+            }
+        }
+        Command::List { left, right, .. } => {
+            collect_heredocs_impl(left, heredocs);
+            collect_heredocs_impl(right, heredocs);
+        }
+        Command::For {
+            body, redirects, ..
+        }
+        | Command::Select {
+            body, redirects, ..
+        }
+        | Command::Group {
+            body, redirects, ..
+        }
+        | Command::Subshell {
+            body, redirects, ..
+        } => {
+            collect_heredocs_impl(body, heredocs);
+            collect_redirect_heredocs(redirects, heredocs);
+        }
+        Command::While {
+            test,
+            body,
+            redirects,
+            ..
+        }
+        | Command::Until {
+            test,
+            body,
+            redirects,
+            ..
+        } => {
+            collect_heredocs_impl(test, heredocs);
+            collect_heredocs_impl(body, heredocs);
+            collect_redirect_heredocs(redirects, heredocs);
+        }
+        Command::If {
+            condition,
+            then_branch,
+            else_branch,
+            redirects,
+            ..
+        } => {
+            collect_heredocs_impl(condition, heredocs);
+            collect_heredocs_impl(then_branch, heredocs);
+            if let Some(else_branch) = else_branch {
+                collect_heredocs_impl(else_branch, heredocs);
+            }
+            collect_redirect_heredocs(redirects, heredocs);
+        }
+        Command::Case {
+            clauses, redirects, ..
+        } => {
+            for clause in clauses {
+                if let Some(action) = &clause.action {
+                    collect_heredocs_impl(action, heredocs);
+                }
+            }
+            collect_redirect_heredocs(redirects, heredocs);
+        }
+        Command::FunctionDef { body, .. }
+        | Command::ArithmeticFor { body, .. }
+        | Command::Coproc { body, .. } => collect_heredocs_impl(body, heredocs),
+        Command::Arithmetic { .. } | Command::Conditional { .. } => {}
     }
+}
 
+fn write_deferred_heredocs(cmd: &Command, out: &mut String) {
+    for heredoc in collect_heredocs(cmd) {
+        out.push('\n');
+        write_heredoc_content(heredoc, out);
+    }
+}
+
+fn write_deferred_heredocs_from_redirects(redirects: &[Redirect], out: &mut String) {
+    for redirect in redirects {
+        if is_heredoc_redirect(redirect) {
+            out.push('\n');
+            write_heredoc_content(redirect, out);
+        }
+    }
+}
+
+fn write_deferred_heredocs_from_commands(commands: &[Command], out: &mut String) {
+    for command in commands {
+        write_deferred_heredocs(command, out);
+    }
+}
+
+fn write_deferred_heredocs_from_opt_command(cmd: Option<&Command>, out: &mut String) {
+    if let Some(cmd) = cmd {
+        write_deferred_heredocs(cmd, out);
+    }
+}
+
+/// Write a list (cmd1 && cmd2, cmd1 || cmd2, etc.)
+fn write_list(
+    op: ListOp,
+    left: &Command,
+    right: &Command,
+    out: &mut String,
+    include_heredoc_content: bool,
+) {
     // Check if right side is empty (e.g., "cmd &" has empty right side)
     let right_is_empty = matches!(
         right,
@@ -429,9 +582,11 @@ fn write_list(op: ListOp, left: &Command, right: &Command, out: &mut String) {
         if words.is_empty() && redirects.is_empty() && assignments.is_none()
     );
 
+    let left_has_heredoc = has_heredoc(left);
+
     // For semi, use newline if:
     // 1. Commands are on different lines, OR
-    // 2. Left command has a heredoc (heredoc content requires newline after delimiter)
+    // 2. Left command has a heredoc (heredoc content must come before the next command)
     let use_newline = op == ListOp::Semi
         && (left_has_heredoc
             || match (get_last_line(left), get_first_line(right)) {
@@ -440,28 +595,47 @@ fn write_list(op: ListOp, left: &Command, right: &Command, out: &mut String) {
             });
 
     match op {
-        ListOp::And => out.push_str(" && "),
-        ListOp::Or => out.push_str(" || "),
-        ListOp::Semi if use_newline => out.push('\n'),
-        ListOp::Semi => out.push_str("; "),
-        ListOp::Amp => {
-            out.push_str(" &");
+        // These operators keep both commands on the same logical command line, so any
+        // heredoc content must be deferred until after the entire list is written.
+        ListOp::And | ListOp::Or | ListOp::Amp => {
+            write_command_impl(left, out, false);
+
+            match op {
+                ListOp::And => out.push_str(" && "),
+                ListOp::Or => out.push_str(" || "),
+                ListOp::Amp => {
+                    out.push_str(" &");
+                    if !right_is_empty {
+                        out.push(' ');
+                    }
+                }
+                ListOp::Semi | ListOp::Newline => unreachable!(),
+            }
+
             if !right_is_empty {
-                out.push(' ');
+                write_command_impl(right, out, false);
+            }
+
+            if include_heredoc_content {
+                write_deferred_heredocs(left, out);
+                if !right_is_empty {
+                    write_deferred_heredocs(right, out);
+                }
             }
         }
-        ListOp::Newline => out.push('\n'),
-    }
+        ListOp::Semi | ListOp::Newline => {
+            write_command_impl(left, out, include_heredoc_content);
 
-    if !right_is_empty {
-        write_command(right, out);
-    }
+            match op {
+                ListOp::Semi if use_newline => out.push('\n'),
+                ListOp::Semi => out.push_str("; "),
+                ListOp::Newline => out.push('\n'),
+                ListOp::And | ListOp::Or | ListOp::Amp => unreachable!(),
+            }
 
-    // Now write deferred heredoc content
-    if defer_heredocs {
-        for heredoc in collect_heredocs(left) {
-            out.push('\n');
-            write_heredoc_content(heredoc, out);
+            if !right_is_empty {
+                write_command_impl(right, out, include_heredoc_content);
+            }
         }
     }
 }
@@ -485,6 +659,15 @@ fn ends_with_background(cmd: &Command) -> bool {
     }
 }
 
+fn write_compound_separator(out: &mut String, preceding_cmd: &Command, suffix: &str) {
+    if ends_with_background(preceding_cmd) {
+        out.push(' ');
+    } else {
+        out.push_str("; ");
+    }
+    out.push_str(suffix);
+}
+
 /// Write a for loop
 fn write_for(
     variable: &str,
@@ -492,6 +675,7 @@ fn write_for(
     body: &Command,
     redirects: &[Redirect],
     out: &mut String,
+    include_heredoc_content: bool,
 ) {
     out.push_str("for ");
     out.push_str(variable);
@@ -503,41 +687,57 @@ fn write_for(
         }
     }
     out.push_str("; do ");
-    write_command(body, out);
-    if ends_with_background(body) {
-        out.push_str(" done");
-    } else {
-        out.push_str("; done");
+    write_command_impl(body, out, false);
+    write_compound_separator(out, body, "done");
+    write_redirects_impl(redirects, out, false);
+    if include_heredoc_content {
+        write_deferred_heredocs(body, out);
+        write_deferred_heredocs_from_redirects(redirects, out);
     }
-    write_redirects(redirects, out);
 }
 
 /// Write a while loop
-fn write_while(test: &Command, body: &Command, redirects: &[Redirect], out: &mut String) {
+fn write_while(
+    test: &Command,
+    body: &Command,
+    redirects: &[Redirect],
+    out: &mut String,
+    include_heredoc_content: bool,
+) {
     out.push_str("while ");
-    write_command(test, out);
-    out.push_str("; do ");
-    write_command(body, out);
-    if ends_with_background(body) {
-        out.push_str(" done");
-    } else {
-        out.push_str("; done");
+    write_command_impl(test, out, false);
+    write_compound_separator(out, test, "do");
+    out.push(' ');
+    write_command_impl(body, out, false);
+    write_compound_separator(out, body, "done");
+    write_redirects_impl(redirects, out, false);
+    if include_heredoc_content {
+        write_deferred_heredocs(test, out);
+        write_deferred_heredocs(body, out);
+        write_deferred_heredocs_from_redirects(redirects, out);
     }
-    write_redirects(redirects, out);
 }
 
 /// Write an until loop
-fn write_until(test: &Command, body: &Command, redirects: &[Redirect], out: &mut String) {
+fn write_until(
+    test: &Command,
+    body: &Command,
+    redirects: &[Redirect],
+    out: &mut String,
+    include_heredoc_content: bool,
+) {
     out.push_str("until ");
-    write_command(test, out);
-    out.push_str("; do ");
-    write_command(body, out);
-    if ends_with_background(body) {
-        out.push_str(" done");
-    } else {
-        out.push_str("; done");
+    write_command_impl(test, out, false);
+    write_compound_separator(out, test, "do");
+    out.push(' ');
+    write_command_impl(body, out, false);
+    write_compound_separator(out, body, "done");
+    write_redirects_impl(redirects, out, false);
+    if include_heredoc_content {
+        write_deferred_heredocs(test, out);
+        write_deferred_heredocs(body, out);
+        write_deferred_heredocs_from_redirects(redirects, out);
     }
-    write_redirects(redirects, out);
 }
 
 /// Write an if statement
@@ -547,11 +747,13 @@ fn write_if(
     else_branch: Option<&Command>,
     redirects: &[Redirect],
     out: &mut String,
+    include_heredoc_content: bool,
 ) {
     out.push_str("if ");
-    write_command(condition, out);
-    out.push_str("; then ");
-    write_command(then_branch, out);
+    write_command_impl(condition, out, false);
+    write_compound_separator(out, condition, "then");
+    out.push(' ');
+    write_command_impl(then_branch, out, false);
 
     if let Some(else_cmd) = else_branch {
         // Check if it's an elif (nested if in else)
@@ -562,26 +764,37 @@ fn write_if(
             ..
         } = else_cmd
         {
-            out.push_str("; elif ");
-            write_command(elif_cond, out);
-            out.push_str("; then ");
-            write_command(elif_then, out);
+            write_compound_separator(out, then_branch, "elif");
+            out.push(' ');
+            write_command_impl(elif_cond, out, false);
+            write_compound_separator(out, elif_cond, "then");
+            out.push(' ');
+            write_command_impl(elif_then, out, false);
             // Recursively handle more elif/else
             if let Some(nested_else) = elif_else {
-                write_else_chain(nested_else.as_ref(), out);
+                write_else_chain(nested_else.as_ref(), elif_then, out);
             }
         } else {
-            out.push_str("; else ");
-            write_command(else_cmd, out);
+            write_compound_separator(out, then_branch, "else");
+            out.push(' ');
+            write_command_impl(else_cmd, out, false);
         }
     }
 
-    out.push_str("; fi");
-    write_redirects(redirects, out);
+    write_compound_separator(out, else_branch.map_or(then_branch, last_if_branch), "fi");
+    write_redirects_impl(redirects, out, false);
+    if include_heredoc_content {
+        write_deferred_heredocs(condition, out);
+        write_deferred_heredocs(then_branch, out);
+        if let Some(else_cmd) = else_branch {
+            write_deferred_heredocs(else_cmd, out);
+        }
+        write_deferred_heredocs_from_redirects(redirects, out);
+    }
 }
 
 /// Helper to write elif/else chains
-fn write_else_chain(cmd: &Command, out: &mut String) {
+fn write_else_chain(cmd: &Command, previous_branch: &Command, out: &mut String) {
     if let Command::If {
         condition,
         then_branch,
@@ -589,21 +802,41 @@ fn write_else_chain(cmd: &Command, out: &mut String) {
         ..
     } = cmd
     {
-        out.push_str("; elif ");
-        write_command(condition, out);
-        out.push_str("; then ");
-        write_command(then_branch, out);
+        write_compound_separator(out, previous_branch, "elif");
+        out.push(' ');
+        write_command_impl(condition, out, false);
+        write_compound_separator(out, condition, "then");
+        out.push(' ');
+        write_command_impl(then_branch, out, false);
         if let Some(nested_else) = else_branch {
-            write_else_chain(nested_else.as_ref(), out);
+            write_else_chain(nested_else.as_ref(), then_branch, out);
         }
     } else {
-        out.push_str("; else ");
-        write_command(cmd, out);
+        write_compound_separator(out, previous_branch, "else");
+        out.push(' ');
+        write_command_impl(cmd, out, false);
+    }
+}
+
+fn last_if_branch(cmd: &Command) -> &Command {
+    match cmd {
+        Command::If {
+            then_branch,
+            else_branch,
+            ..
+        } => else_branch.as_deref().map_or(then_branch, last_if_branch),
+        other => other,
     }
 }
 
 /// Write a case statement
-fn write_case(word: &str, clauses: &[CaseClause], redirects: &[Redirect], out: &mut String) {
+fn write_case(
+    word: &str,
+    clauses: &[CaseClause],
+    redirects: &[Redirect],
+    out: &mut String,
+    include_heredoc_content: bool,
+) {
     out.push_str("case ");
     out.push_str(word);
     out.push_str(" in ");
@@ -620,7 +853,7 @@ fn write_case(word: &str, clauses: &[CaseClause], redirects: &[Redirect], out: &
 
         // Write action
         if let Some(action) = &clause.action {
-            write_command(action, out);
+            write_command_impl(action, out, false);
         }
 
         // Write terminator
@@ -639,7 +872,13 @@ fn write_case(word: &str, clauses: &[CaseClause], redirects: &[Redirect], out: &
     }
 
     out.push_str("esac");
-    write_redirects(redirects, out);
+    write_redirects_impl(redirects, out, false);
+    if include_heredoc_content {
+        for clause in clauses {
+            write_deferred_heredocs_from_opt_command(clause.action.as_deref(), out);
+        }
+        write_deferred_heredocs_from_redirects(redirects, out);
+    }
 }
 
 /// Write a select statement
@@ -649,6 +888,7 @@ fn write_select(
     body: &Command,
     redirects: &[Redirect],
     out: &mut String,
+    include_heredoc_content: bool,
 ) {
     out.push_str("select ");
     out.push_str(variable);
@@ -660,36 +900,54 @@ fn write_select(
         }
     }
     out.push_str("; do ");
-    write_command(body, out);
-    if ends_with_background(body) {
-        out.push_str(" done");
-    } else {
-        out.push_str("; done");
+    write_command_impl(body, out, false);
+    write_compound_separator(out, body, "done");
+    write_redirects_impl(redirects, out, false);
+    if include_heredoc_content {
+        write_deferred_heredocs(body, out);
+        write_deferred_heredocs_from_redirects(redirects, out);
     }
-    write_redirects(redirects, out);
 }
 
 /// Write a brace group
-fn write_group(body: &Command, redirects: &[Redirect], out: &mut String) {
+fn write_group(
+    body: &Command,
+    redirects: &[Redirect],
+    out: &mut String,
+    include_heredoc_content: bool,
+) {
     out.push_str("{ ");
-    write_command(body, out);
-    out.push_str("; }");
-    write_redirects(redirects, out);
+    write_command_impl(body, out, false);
+    write_compound_separator(out, body, "}");
+    write_redirects_impl(redirects, out, false);
+    if include_heredoc_content {
+        write_deferred_heredocs(body, out);
+        write_deferred_heredocs_from_redirects(redirects, out);
+    }
 }
 
 /// Write a subshell
-fn write_subshell(body: &Command, redirects: &[Redirect], out: &mut String) {
+fn write_subshell(
+    body: &Command,
+    redirects: &[Redirect],
+    out: &mut String,
+    include_heredoc_content: bool,
+) {
     out.push('(');
-    write_command(body, out);
+    write_command_impl(body, out, false);
     out.push(')');
-    write_redirects(redirects, out);
+    write_redirects_impl(redirects, out, false);
+    if include_heredoc_content {
+        write_deferred_heredocs(body, out);
+        write_deferred_heredocs_from_redirects(redirects, out);
+    }
 }
 
 /// Write a function definition
-fn write_function_def(name: &str, body: &Command, out: &mut String) {
+fn write_function_def(name: &str, body: &Command, out: &mut String, include_heredoc_content: bool) {
     out.push_str(name);
     out.push_str("() ");
-    write_command(body, out);
+    write_command_impl(body, out, include_heredoc_content);
 }
 
 /// Write an arithmetic expression
@@ -700,7 +958,14 @@ fn write_arithmetic(expression: &str, out: &mut String) {
 }
 
 /// Write an arithmetic for loop
-fn write_arith_for(init: &str, test: &str, step: &str, body: &Command, out: &mut String) {
+fn write_arith_for(
+    init: &str,
+    test: &str,
+    step: &str,
+    body: &Command,
+    out: &mut String,
+    include_heredoc_content: bool,
+) {
     out.push_str("for ((");
     out.push_str(init);
     out.push_str("; ");
@@ -708,8 +973,11 @@ fn write_arith_for(init: &str, test: &str, step: &str, body: &Command, out: &mut
     out.push_str("; ");
     out.push_str(step);
     out.push_str(")); do ");
-    write_command(body, out);
-    out.push_str("; done");
+    write_command_impl(body, out, false);
+    write_compound_separator(out, body, "done");
+    if include_heredoc_content {
+        write_deferred_heredocs(body, out);
+    }
 }
 
 /// Write a conditional expression [[ ... ]]
@@ -760,7 +1028,12 @@ fn write_cond_expr(expr: &ConditionalExpr, out: &mut String) {
 }
 
 /// Write a coproc
-fn write_coproc(name: Option<&str>, body: &Command, out: &mut String) {
+fn write_coproc(
+    name: Option<&str>,
+    body: &Command,
+    out: &mut String,
+    include_heredoc_content: bool,
+) {
     out.push_str("coproc ");
     // Only print name if it's not the default "COPROC" or if body is a group/complex command
     // When body is a simple command and name is COPROC, bash auto-generates the name
@@ -774,7 +1047,7 @@ fn write_coproc(name: Option<&str>, body: &Command, out: &mut String) {
             out.push(' ');
         }
     }
-    write_command(body, out);
+    write_command_impl(body, out, include_heredoc_content);
 }
 
 #[cfg(test)]
