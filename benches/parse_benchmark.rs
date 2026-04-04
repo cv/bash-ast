@@ -5,7 +5,8 @@
 //! Results are saved to target/criterion/ with HTML reports.
 
 use bash_ast::{init, parse, parse_to_json};
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
 use std::sync::Once;
 
 static INIT: Once = Once::new();
