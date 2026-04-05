@@ -20,6 +20,7 @@ cc = "1.0"
 [dev-dependencies]
 proptest = "1.5"
 criterion = { version = "0.8", features = ["html_reports"] }
+jsonschema = "0.45"
 
 [[bin]]
 name = "bash-ast"

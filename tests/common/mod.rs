@@ -88,6 +88,71 @@ pub fn normalize_for_comparison(value: &mut serde_json::Value) {
     }
 }
 
+pub const fn to_bash_regression_scripts() -> &'static [&'static str] {
+    &[
+        "cat <<EOF | grep h\nhello\nEOF",
+        "cat <<EOF && echo hi\nhello\nEOF",
+        "cat <<EOF & wait\nhello\nEOF",
+        "if cat <<EOF; then echo yes; fi\nhello\nEOF",
+        "while cat <<EOF; do echo body; done\na\nEOF",
+        "{ cat <<EOF; }\nhello\nEOF",
+        "case x in a) cat <<EOF;; esac\nhello\nEOF",
+        "for i in a; do sleep 1 & done",
+        "{ sleep 1 & }",
+        "if true; then sleep 1 & fi",
+        "for ((i=0; i<1; i++)); do sleep 1 & done",
+    ]
+}
+
+pub const fn to_bash_roundtrip_matrix_scripts() -> &'static [&'static str] {
+    &[
+        "cat <<L && echo rhs\nleft\nL",
+        "echo lhs && cat <<R\nright\nR",
+        "cat <<L || echo rhs\nleft\nL",
+        "echo lhs || cat <<R\nright\nR",
+        "cat <<L | grep l\nleft\nL",
+        "grep l <<<left | cat <<R\nright\nR",
+        "cat <<L & wait\nleft\nL",
+        "echo lhs & cat <<R\nright\nR",
+        "cat <<L; echo rhs\nleft\nL",
+        "echo lhs; cat <<R\nright\nR",
+        "cat <<A && cat <<B\nleft\nA\nright\nB",
+        "cat <<A | cat <<B\nleft\nA\nright\nB",
+        "if cat <<EOF; then echo yes; fi\nhello\nEOF",
+        "if true; then cat <<EOF; else echo no; fi\nhello\nEOF",
+        "if false; then echo no; else cat <<EOF; fi\nhello\nEOF",
+        "while cat <<EOF; do echo body; done\nhello\nEOF",
+        "while true; do cat <<EOF; done\nhello\nEOF",
+        "until cat <<EOF; do echo body; done\nhello\nEOF",
+        "for i in a; do cat <<EOF; done\nhello\nEOF",
+        "for ((i=0; i<1; i++)); do cat <<EOF; done\nhello\nEOF",
+        "select opt in a; do cat <<EOF; break; done\nhello\nEOF",
+        "{ cat <<EOF; }\nhello\nEOF",
+        "{ cat <<EOF; } >out\nhello\nEOF",
+        "(cat <<EOF)\nhello\nEOF",
+        "foo() { cat <<EOF; }\nhello\nEOF",
+        "case x in a) cat <<EOF;; esac\nhello\nEOF",
+        "coproc cat <<EOF\nhello\nEOF",
+        "for i in a; do sleep 1 & done",
+        "for i in a; do echo one; sleep 1 & done",
+        "while true; do sleep 1 & done",
+        "until false; do sleep 1 & done",
+        "if true; then sleep 1 & fi",
+        "if true; then echo one; sleep 1 & fi",
+        "if false; then echo no; else sleep 1 & fi",
+        "select opt in a; do sleep 1 & done",
+        "{ sleep 1 & }",
+        "{ echo one; sleep 1 & }",
+        "for ((i=0; i<1; i++)); do sleep 1 & done",
+        "case x in a) sleep 1 &;; esac",
+        "cat <<A; cat <<B\nleft\nA\nright\nB",
+        "cat <<A && cat <<B\nleft\nA\nright\nB",
+        "{ cat <<A; cat <<B; }\nleft\nA\nright\nB",
+        "{ cat <<A; cat <<B; } >out\nleft\nA\nright\nB",
+        "while cat <<A; do cat <<B; done\nleft\nA\nright\nB",
+    ]
+}
+
 pub fn word(text: &str) -> Word {
     Word {
         word: text.to_string(),
