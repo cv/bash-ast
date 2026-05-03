@@ -303,7 +303,7 @@ make ci          # Full CI pipeline (lint + test)
 
 The repository includes a GitHub Actions proof-of-concept workflow at `.github/workflows/adversarial-review.yml`. It can be run manually with `workflow_dispatch` and also runs on same-repository pull requests. Forked PRs are skipped so model/API secrets are not exposed to untrusted code.
 
-Configure either `ADVERSARIAL_REVIEW_API_KEY` or a provider-specific secret such as `ANTHROPIC_API_KEY`/`OPENAI_API_KEY`. Optional repository variables include `ADVERSARIAL_REVIEW_PROVIDER`, `ADVERSARIAL_REVIEW_MODEL`, and `ADVERSARIAL_REVIEW_POST_COMMENTS=true` to enable the sticky PR comment. The workflow uploads `review-artifacts/**` and writes a GitHub Actions job summary containing baseline test logs plus the agent's structured adversarial parser probes.
+Configure `ADVERSARIAL_REVIEW_API_KEY` plus repository variables such as `ADVERSARIAL_REVIEW_PROVIDER`, `ADVERSARIAL_REVIEW_MODEL`, `ADVERSARIAL_REVIEW_PROVIDER_BASE_URL`, and `ADVERSARIAL_REVIEW_PROVIDER_API`. Set `ADVERSARIAL_REVIEW_POST_COMMENTS=true` to enable the sticky PR comment. The workflow uploads `review-artifacts/**` and writes a GitHub Actions job summary containing baseline test logs plus the agent's structured adversarial parser probes.
 
 ### Coverage (Linux CI)
 

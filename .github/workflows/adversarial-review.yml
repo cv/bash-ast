@@ -166,17 +166,16 @@ jobs:
           pr_number: ${{ github.event.pull_request.number || github.event.inputs.pr_number || '' }}
           timeout: '1800'
           share_session: true
-          provider: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER || 'anthropic' }}
-          model: ${{ vars.ADVERSARIAL_REVIEW_MODEL || 'claude-sonnet-4-20250514' }}
+          provider: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER }}
+          model: ${{ vars.ADVERSARIAL_REVIEW_MODEL }}
           api_key: ${{ secrets.ADVERSARIAL_REVIEW_API_KEY }}
-          provider_base_url: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_BASE_URL || '' }}
-          provider_api: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_API || 'openai-completions' }}
-          provider_api_key: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_API_KEY || '' }}
-          provider_auth_header: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_AUTH_HEADER || 'false' }}
-          model_name: ${{ vars.ADVERSARIAL_REVIEW_MODEL_NAME || '' }}
-          model_reasoning: ${{ vars.ADVERSARIAL_REVIEW_MODEL_REASONING || 'false' }}
-          model_context_window: ${{ vars.ADVERSARIAL_REVIEW_MODEL_CONTEXT_WINDOW || '128000' }}
-          model_max_tokens: ${{ vars.ADVERSARIAL_REVIEW_MODEL_MAX_TOKENS || '16384' }}
+          provider_base_url: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_BASE_URL }}
+          provider_api: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_API }}
+          model_name: ${{ vars.ADVERSARIAL_REVIEW_MODEL_NAME }}
+          model_reasoning: ${{ vars.ADVERSARIAL_REVIEW_MODEL_REASONING }}
+          model_input: ${{ vars.ADVERSARIAL_REVIEW_MODEL_INPUT }}
+          model_context_window: ${{ vars.ADVERSARIAL_REVIEW_MODEL_CONTEXT_WINDOW }}
+          model_max_tokens: ${{ vars.ADVERSARIAL_REVIEW_MODEL_MAX_TOKENS }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
