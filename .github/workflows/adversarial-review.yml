@@ -157,7 +157,7 @@ jobs:
       - name: Run adversarial review
         id: review_agent
         continue-on-error: true
-        uses: cv/pi-action@v1
+        uses: cv/pi-action@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           output_mode: output
