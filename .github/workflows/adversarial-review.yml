@@ -1,0 +1,209 @@
+name: Adversarial review
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Optional pull request number to review
+        required: false
+        default: ''
+      ref:
+        description: Optional ref, branch, or SHA to review when pr_number is empty
+        required: false
+        default: ''
+      post_comment:
+        description: Post or update the sticky PR review comment
+        required: false
+        type: boolean
+        default: false
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+  actions: read
+
+concurrency:
+  group: adversarial-review-${{ github.workflow }}-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.event.inputs.ref || github.sha }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number || '' }}
+  BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
+  HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  adversarial-review:
+    name: Adversarial review
+    # pull_request runs only for same-repository branches so repository/model secrets are not exposed to forked PR code.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout target
+        uses: actions/checkout@v6.0.2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.inputs.ref || github.sha }}
+
+      - name: Checkout workflow_dispatch PR
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pr_number != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_PR: ${{ github.event.inputs.pr_number }}
+        run: bash .github/scripts/adversarial-review/checkout-workflow-dispatch-pr.sh
+
+      - name: Install OS dependencies
+        run: bash .github/scripts/adversarial-review/install-os-dependencies.sh
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Setup Node.js for agent action
+        uses: actions/setup-node@v6
+        with:
+          node-version: '25'
+
+      - name: Build baseline binary
+        id: build
+        continue-on-error: true
+        run: bash .github/scripts/adversarial-review/build-baseline-binary.sh
+
+      - name: Run baseline tests
+        id: baseline_tests
+        continue-on-error: true
+        run: bash .github/scripts/adversarial-review/run-baseline-tests.sh
+
+      - name: Collect automated test inventory
+        if: always()
+        run: bash .github/scripts/adversarial-review/collect-test-inventory.sh
+
+      - name: Collect review context
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/adversarial-review/collect-review-context.sh
+
+      - name: Compose review prompt
+        id: compose_prompt
+        run: bash .github/scripts/adversarial-review/compose-review-prompt.sh
+
+      - name: Run adversarial review
+        id: review_agent
+        continue-on-error: true
+        uses: cv/pi-action@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          output_mode: output
+          allowed_associations: OWNER,MEMBER,COLLABORATOR
+          prompt: ${{ steps.compose_prompt.outputs.prompt }}
+          pr_number: ${{ github.event.pull_request.number || github.event.inputs.pr_number || '' }}
+          timeout: '1800'
+          share_session: true
+          provider: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER }}
+          model: ${{ vars.ADVERSARIAL_REVIEW_MODEL }}
+          api_key: ${{ secrets.ADVERSARIAL_REVIEW_API_KEY }}
+          provider_base_url: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_BASE_URL }}
+          provider_api: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_API }}
+          model_name: ${{ vars.ADVERSARIAL_REVIEW_MODEL_NAME }}
+          model_reasoning: ${{ vars.ADVERSARIAL_REVIEW_MODEL_REASONING }}
+          model_input: ${{ vars.ADVERSARIAL_REVIEW_MODEL_INPUT }}
+          model_context_window: ${{ vars.ADVERSARIAL_REVIEW_MODEL_CONTEXT_WINDOW }}
+          model_max_tokens: ${{ vars.ADVERSARIAL_REVIEW_MODEL_MAX_TOKENS }}
+        env:
+          NPM_CONFIG_IGNORE_SCRIPTS: 'true'
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+
+      - name: Validate initial agent response
+        id: validate_initial_response
+        if: always()
+        env:
+          AGENT_RESPONSE: ${{ steps.review_agent.outputs.response }}
+        run: bash .github/scripts/adversarial-review/validate-initial-agent-response.sh
+
+      - name: Compose retry review prompt
+        id: compose_retry_prompt
+        if: ${{ always() && steps.validate_initial_response.outputs.valid != 'true' }}
+        env:
+          RETRY_REASON: ${{ steps.validate_initial_response.outputs.reason }}
+        run: bash .github/scripts/adversarial-review/compose-retry-review-prompt.sh
+
+      - name: Retry adversarial review if structured result is missing
+        id: review_agent_retry
+        if: ${{ always() && steps.validate_initial_response.outputs.valid != 'true' }}
+        continue-on-error: true
+        uses: cv/pi-action@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          output_mode: output
+          allowed_associations: OWNER,MEMBER,COLLABORATOR
+          prompt: ${{ steps.compose_retry_prompt.outputs.prompt }}
+          pr_number: ${{ github.event.pull_request.number || github.event.inputs.pr_number || '' }}
+          timeout: '1800'
+          share_session: true
+          provider: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER }}
+          model: ${{ vars.ADVERSARIAL_REVIEW_MODEL }}
+          api_key: ${{ secrets.ADVERSARIAL_REVIEW_API_KEY }}
+          provider_base_url: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_BASE_URL }}
+          provider_api: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_API }}
+          model_name: ${{ vars.ADVERSARIAL_REVIEW_MODEL_NAME }}
+          model_reasoning: ${{ vars.ADVERSARIAL_REVIEW_MODEL_REASONING }}
+          model_input: ${{ vars.ADVERSARIAL_REVIEW_MODEL_INPUT }}
+          model_context_window: ${{ vars.ADVERSARIAL_REVIEW_MODEL_CONTEXT_WINDOW }}
+          model_max_tokens: ${{ vars.ADVERSARIAL_REVIEW_MODEL_MAX_TOKENS }}
+        env:
+          NPM_CONFIG_IGNORE_SCRIPTS: 'true'
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+
+      - name: Persist agent response
+        if: always()
+        env:
+          INITIAL_VALID: ${{ steps.validate_initial_response.outputs.valid }}
+          INITIAL_RESPONSE: ${{ steps.review_agent.outputs.response }}
+          INITIAL_SUCCESS: ${{ steps.review_agent.outputs.success }}
+          INITIAL_SHARE_URL: ${{ steps.review_agent.outputs.share_url }}
+          RETRY_RESPONSE: ${{ steps.review_agent_retry.outputs.response }}
+          RETRY_SUCCESS: ${{ steps.review_agent_retry.outputs.success }}
+          RETRY_SHARE_URL: ${{ steps.review_agent_retry.outputs.share_url }}
+        run: bash .github/scripts/adversarial-review/persist-agent-response.sh
+
+      - name: Render review summary
+        if: always()
+        run: bash .github/scripts/adversarial-review/render-review-summary.sh
+
+      - name: Upload review artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: adversarial-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: review-artifacts/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Post or update sticky PR comment
+        if: ${{ always() && env.PR_NUMBER != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ADVERSARIAL_REVIEW_POST_COMMENTS: ${{ vars.ADVERSARIAL_REVIEW_POST_COMMENTS }}
+        run: bash .github/scripts/adversarial-review/post-sticky-pr-comment.sh
+
+      - name: Enforce adversarial review recommendation
+        if: always()
+        run: bash .github/scripts/adversarial-review/enforce-recommendation.sh
