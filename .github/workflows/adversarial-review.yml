@@ -1,0 +1,255 @@
+name: Adversarial review
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Optional pull request number to review
+        required: false
+        default: ''
+      ref:
+        description: Optional ref, branch, or SHA to review when pr_number is empty
+        required: false
+        default: ''
+      post_comment:
+        description: Post or update the sticky PR review comment
+        required: false
+        type: boolean
+        default: false
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+  actions: read
+
+concurrency:
+  group: adversarial-review-${{ github.workflow }}-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.event.inputs.ref || github.sha }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number || '' }}
+  BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
+  HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  adversarial-review:
+    name: Adversarial review
+    # pull_request runs only for same-repository branches so repository/model secrets are not exposed to forked PR code.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout target
+        uses: actions/checkout@v6.0.2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.inputs.ref || github.sha }}
+
+      - name: Checkout workflow_dispatch PR
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pr_number != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_PR: ${{ github.event.inputs.pr_number }}
+        run: |
+          set -euxo pipefail
+          gh pr checkout "$REQUESTED_PR"
+          git submodule update --init --recursive
+          echo "HEAD_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "BASE_REF=$(gh pr view "$REQUESTED_PR" --json baseRefName --jq .baseRefName)" >> "$GITHUB_ENV"
+
+      - name: Install OS dependencies
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libncurses-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Setup Node.js for agent action
+        uses: actions/setup-node@v6
+        with:
+          node-version: '25'
+
+      - name: Build baseline binary
+        id: build
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p review-artifacts
+          cargo build --verbose 2>&1 | tee review-artifacts/build.log
+          status=${PIPESTATUS[0]}
+          echo "$status" > review-artifacts/build-status.txt
+          exit "$status"
+
+      - name: Run baseline tests
+        id: baseline_tests
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p review-artifacts
+          cargo test --verbose -- --test-threads=1 2>&1 | tee review-artifacts/baseline-tests.log
+          status=${PIPESTATUS[0]}
+          echo "$status" > review-artifacts/baseline-test-status.txt
+          exit "$status"
+
+      - name: Collect review context
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          mkdir -p review-artifacts/agent-probes
+          git status --short > review-artifacts/git-status.txt
+          git log --oneline -n 20 > review-artifacts/recent-commits.txt
+          cargo metadata --no-deps --format-version 1 > review-artifacts/cargo-metadata.json || true
+
+          git fetch origin "$BASE_REF" --depth=1 || true
+          if git rev-parse --verify "origin/$BASE_REF" >/dev/null 2>&1; then
+            git diff --stat "origin/$BASE_REF...HEAD" > review-artifacts/base-diff.stat || true
+            git diff --find-renames "origin/$BASE_REF...HEAD" > review-artifacts/base-diff.patch || true
+          else
+            : > review-artifacts/base-diff.stat
+            : > review-artifacts/base-diff.patch
+          fi
+
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr view "$PR_NUMBER" \
+              --json number,title,author,body,baseRefName,headRefName,headRefOid,url,files,comments \
+              > review-artifacts/pr-context.json || echo '{}' > review-artifacts/pr-context.json
+            gh pr diff "$PR_NUMBER" > review-artifacts/pr.diff || true
+          else
+            echo '{}' > review-artifacts/pr-context.json
+            : > review-artifacts/pr.diff
+          fi
+
+      - name: Compose review prompt
+        id: compose_prompt
+        run: |
+          set -euo pipefail
+          delimiter="REVIEW_PROMPT_$(date +%s)_$$"
+          {
+            echo "prompt<<$delimiter"
+            cat .github/prompts/adversarial-review.md
+            echo
+            echo "## Workflow-provided context"
+            echo
+            echo "- Repository: $GITHUB_REPOSITORY"
+            echo "- Event: $GITHUB_EVENT_NAME"
+            echo "- PR number: ${PR_NUMBER:-none}"
+            echo "- Base ref: ${BASE_REF:-unknown}"
+            echo "- Head SHA: ${HEAD_SHA:-unknown}"
+            echo "- Build exit code: $(cat review-artifacts/build-status.txt 2>/dev/null || echo unknown)"
+            echo "- Baseline test exit code: $(cat review-artifacts/baseline-test-status.txt 2>/dev/null || echo unknown)"
+            echo
+            echo "Artifacts are available under ./review-artifacts/. Keep any additional probe artifacts under ./review-artifacts/agent-probes/."
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run adversarial review
+        id: review_agent
+        continue-on-error: true
+        uses: cv/pi-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          output_mode: output
+          allowed_associations: OWNER,MEMBER,COLLABORATOR
+          prompt: ${{ steps.compose_prompt.outputs.prompt }}
+          pr_number: ${{ github.event.pull_request.number || github.event.inputs.pr_number || '' }}
+          timeout: '1800'
+          share_session: true
+          provider: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER || 'anthropic' }}
+          model: ${{ vars.ADVERSARIAL_REVIEW_MODEL || 'claude-sonnet-4-20250514' }}
+          api_key: ${{ secrets.ADVERSARIAL_REVIEW_API_KEY }}
+          provider_base_url: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_BASE_URL || '' }}
+          provider_api: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_API || 'openai-completions' }}
+          provider_api_key: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_API_KEY || '' }}
+          provider_auth_header: ${{ vars.ADVERSARIAL_REVIEW_PROVIDER_AUTH_HEADER || 'false' }}
+          model_name: ${{ vars.ADVERSARIAL_REVIEW_MODEL_NAME || '' }}
+          model_reasoning: ${{ vars.ADVERSARIAL_REVIEW_MODEL_REASONING || 'false' }}
+          model_context_window: ${{ vars.ADVERSARIAL_REVIEW_MODEL_CONTEXT_WINDOW || '128000' }}
+          model_max_tokens: ${{ vars.ADVERSARIAL_REVIEW_MODEL_MAX_TOKENS || '16384' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+
+      - name: Persist agent response
+        if: always()
+        env:
+          AGENT_RESPONSE: ${{ steps.review_agent.outputs.response }}
+          AGENT_SUCCESS: ${{ steps.review_agent.outputs.success }}
+          AGENT_SHARE_URL: ${{ steps.review_agent.outputs.share_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p review-artifacts
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          Path('review-artifacts/agent-response.md').write_text(os.environ.get('AGENT_RESPONSE', ''), encoding='utf-8')
+          Path('review-artifacts/agent-action-metadata.json').write_text(
+              json.dumps({
+                  'success': os.environ.get('AGENT_SUCCESS', ''),
+                  'share_url': os.environ.get('AGENT_SHARE_URL', ''),
+              }, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
+      - name: Render review summary
+        if: always()
+        run: |
+          set -euxo pipefail
+          python3 .github/scripts/render-adversarial-review-summary.py \
+            --response review-artifacts/agent-response.md \
+            --build-log review-artifacts/build.log \
+            --baseline-log review-artifacts/baseline-tests.log \
+            --build-status review-artifacts/build-status.txt \
+            --baseline-status review-artifacts/baseline-test-status.txt \
+            --output review-artifacts/adversarial-review-summary.md
+          cat review-artifacts/adversarial-review-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload review artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adversarial-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: review-artifacts/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Post or update sticky PR comment
+        if: ${{ always() && env.PR_NUMBER != '' && (vars.ADVERSARIAL_REVIEW_POST_COMMENTS == 'true' || github.event.inputs.post_comment == 'true') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          marker='<!-- adversarial-review:bash-ast -->'
+          body_file=$(mktemp)
+          {
+            echo "$marker"
+            echo "<!-- head_sha: ${HEAD_SHA:-unknown}; run_id: $GITHUB_RUN_ID; run_attempt: $GITHUB_RUN_ATTEMPT -->"
+            echo
+            cat review-artifacts/adversarial-review-summary.md
+          } > "$body_file"
+
+          comment_id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --paginate \
+            --jq ".[] | select(.body | contains(\"$marker\")) | .id" | tail -n 1)
+
+          if [ -n "$comment_id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" -F "body=@$body_file" >/dev/null
+          else
+            gh pr comment "$PR_NUMBER" --body-file "$body_file"
+          fi
