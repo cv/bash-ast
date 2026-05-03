@@ -231,11 +231,18 @@ jobs:
           retention-days: 14
 
       - name: Post or update sticky PR comment
-        if: ${{ always() && env.PR_NUMBER != '' && (vars.ADVERSARIAL_REVIEW_POST_COMMENTS == 'true' || github.event.inputs.post_comment == 'true') }}
+        if: ${{ always() && env.PR_NUMBER != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          ADVERSARIAL_REVIEW_POST_COMMENTS: ${{ vars.ADVERSARIAL_REVIEW_POST_COMMENTS }}
         run: |
           set -euo pipefail
+          post_comment_input=$(jq -r '.inputs.post_comment // "false"' "$GITHUB_EVENT_PATH")
+          if [ "${ADVERSARIAL_REVIEW_POST_COMMENTS:-}" != "true" ] && [ "$post_comment_input" != "true" ]; then
+            echo "Sticky PR comment disabled; set ADVERSARIAL_REVIEW_POST_COMMENTS=true or workflow_dispatch post_comment=true to enable."
+            exit 0
+          fi
+
           marker='<!-- adversarial-review:bash-ast -->'
           body_file=$(mktemp)
           {
