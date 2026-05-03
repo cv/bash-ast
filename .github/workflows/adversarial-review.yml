@@ -177,6 +177,7 @@ jobs:
           model_context_window: ${{ vars.ADVERSARIAL_REVIEW_MODEL_CONTEXT_WINDOW }}
           model_max_tokens: ${{ vars.ADVERSARIAL_REVIEW_MODEL_MAX_TOKENS }}
         env:
+          NPM_CONFIG_IGNORE_SCRIPTS: 'true'
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
