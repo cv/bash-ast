@@ -1,0 +1,80 @@
+name: Enemy review
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Optional pull request number to review
+        required: false
+        default: ''
+      ref:
+        description: Optional ref, branch, or SHA to review when pr_number is empty
+        required: false
+        default: ''
+      post_comment:
+        description: Post or update the sticky PR review comment
+        required: false
+        type: boolean
+        default: false
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+  actions: read
+
+concurrency:
+  group: enemy-review-${{ github.workflow }}-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.event.inputs.ref || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  enemy:
+    name: Enemy review
+    # pull_request runs only for same-repository branches so repository/model secrets are not exposed to forked PR code.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout target
+        uses: actions/checkout@v6.0.2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.inputs.ref || github.sha }}
+
+      - name: Checkout workflow_dispatch PR
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pr_number != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_PR: ${{ github.event.inputs.pr_number }}
+        run: |
+          set -euxo pipefail
+          gh pr checkout "$REQUESTED_PR"
+          git submodule update --init --recursive
+
+      - name: Run enemy
+        uses: cv/enemy@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt_file: .github/prompts/enemy.md
+          pr_number: ${{ github.event.pull_request.number || github.event.inputs.pr_number || '' }}
+          baseline_command: |
+            cargo build --verbose
+            cargo test --verbose -- --test-threads=1
+          test_inventory_command: cargo test -- --list
+          post_comment: ${{ vars.ENEMY_POST_COMMENTS == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.post_comment == 'true') }}
+          comment_marker: '<!-- enemy-review:bash-ast -->'
+          provider: ${{ vars.ENEMY_PROVIDER }}
+          model: ${{ vars.ENEMY_MODEL }}
+          api_key: ${{ secrets.ENEMY_API_KEY }}
+          provider_base_url: ${{ vars.ENEMY_PROVIDER_BASE_URL }}
+          provider_api: ${{ vars.ENEMY_PROVIDER_API }}
+          model_name: ${{ vars.ENEMY_MODEL_NAME }}
+          model_reasoning: ${{ vars.ENEMY_MODEL_REASONING }}
+          model_input: ${{ vars.ENEMY_MODEL_INPUT }}
+          model_context_window: ${{ vars.ENEMY_MODEL_CONTEXT_WINDOW }}
+          model_max_tokens: ${{ vars.ENEMY_MODEL_MAX_TOKENS }}
